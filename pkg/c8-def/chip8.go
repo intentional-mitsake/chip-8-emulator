@@ -1,9 +1,6 @@
 package c8def
 
-import (
-	"math/rand"
-	"os"
-)
+import "os"
 
 const (
 	MemSize       = 4096 // 4KB memory
@@ -14,6 +11,7 @@ const (
 
 //btw to clear confusion later on
 //uint8 and byte are the same thing in GO
+//this file will define the Chip8 struct and its initialization, as well as loading the fontset and ROM into memory
 
 type Chip8 struct {
 	Memory [MemSize]byte // 4KB memory
@@ -83,17 +81,10 @@ func (c *Chip8) LoadFontset() {
 		0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 		0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 	}
+	//load the fontset(char thru 0-F) into the first 80 bytes of mem(0x00 to 0x4F or 0 to 79)
 	for i := 0; i < len(fontset); i++ {
 		c.Memory[i] = fontset[i]
 	}
-}
-
-func RandNumGen() byte {
-	return byte(rand.Intn(256)) // Gen a random byte (0-255)
-	//need this for the CXNN instruction
-	//used for enemies in games to move randomly or for random events
-	//doesnt need to be truly random, just good enough for games
-	//this should be gud enough
 }
 
 func (c *Chip8) LoadROM(path string) error {
