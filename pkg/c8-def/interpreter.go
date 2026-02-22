@@ -163,12 +163,7 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		x := c.V[X] % DisplayWidth //get the x coordinate from VX, wrap around if it exceeds display width
 		y := c.V[Y] % DisplayHeight
 		c.V[0xF] = 0 //reset VF before drawing the sprite
-		for row := 0; row < int(N); row++ {
-			spriteByte := c.Memory[c.I+uint16(row)] //get the sprite byte from memory starting at address I
-			for col := 0; col < 8; col++ {
-
-			}
-		} //c.DrawSprite() //draw sprite at (VX,VY) with height N, sprite data is read from memory starting at address I, VF is set to 1 if any pixels are flipped from set to unset when the sprite is drawn, and 0 otherwise
+		c.DrawSprites(x, y, byte(N))
 	case 0xE000:
 		//compare with E09E and E0A1 to determine which one it is
 		if inst == InstSet.Set["KeyEq"] {
