@@ -21,12 +21,12 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error loading ROM: %v\n", err)
 	}
-	fmt.Printf("Memory after loading ROM: %v\n", chip8.Memory)
-
-	fetchedInst := chip8.Fetch()
+	//fmt.Printf("Memory after loading ROM: %v\n", chip8.Memory)
+	//fetchedInst := chip8.Fetch()
 	//b2 gets lower 8 bits--> 0x1234--> b2=0x34 and b1 gets higher 8 bits--> 0x12
-	b1 := byte(fetchedInst)
+	//b1 := byte(fetchedInst)
 	//shifts to right by 8 bits--> 0x1234 >> 8 = 0x12
-	b2 := byte(fetchedInst >> 8) //get second inst byte (higher 8 bits)
-	fmt.Printf("Fetched instruction(In HexCode): 0x%X\nIn Bytes: %v %v\n", fetchedInst, b1, b2)
+	//b2 := byte(fetchedInst >> 8) //get second inst byte (higher 8 bits)
+	//fmt.Printf("Fetched instruction(In HexCode): 0x%X\nIn Bytes: %v %v\n", fetchedInst, b1, b2)
+	chip8.Render() //render the display (for debugging purposes)
 }

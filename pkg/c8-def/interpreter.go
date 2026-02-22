@@ -31,3 +31,7 @@ func (c *Chip8) Fetch() uint16 {
 	c.PC += 2 //incr the PC by 2 to point to the next inst
 	return inst
 }
+
+func (c *Chip8) Decode(inst uint16) {
+
+}
