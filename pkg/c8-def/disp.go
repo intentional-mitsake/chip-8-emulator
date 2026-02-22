@@ -2,20 +2,28 @@ package c8def
 
 import (
 	"fmt"
+	"strings"
 )
 
-func (c *Chip8) Render() {
-	for y := 0; y < DisplayHeight; y++ {
-		for x := 0; x < DisplayWidth; x++ {
-			pixel := c.Display[y*DisplayWidth+x]
-			if pixel == 1 {
-				fmt.Print("█") // On pixel
+const (
+	Scale = 10
+	Green = "\033[32m"
+	Reset = "\033[0m"
+)
+
+func (c *Chip8) RenderTerminal() {
+	var builder strings.Builder
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 64; x++ {
+			if c.Display[y*64+x] == 1 {
+				builder.WriteString(Green + "█" + Reset)
 			} else {
-				fmt.Print(" ") // Off pixel
+				builder.WriteString(" ")
 			}
 		}
-		fmt.Println() // New line after each row
+		builder.WriteString("\n")
 	}
+	fmt.Print(builder.String())
 }
 
 func (c *Chip8) ClearDisplay() {
@@ -24,4 +32,8 @@ func (c *Chip8) ClearDisplay() {
 	}
 }
 
-func (c *Chip8) DrawSprite(x, y byte, sprite []byte) {}
+func (c *Chip8) DrawSprites(x, y byte, N byte) {
+	for i := 0; i < int(N); i++ {
+
+	}
+}
