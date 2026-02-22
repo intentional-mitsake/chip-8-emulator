@@ -39,6 +39,8 @@ func NewChip8() *Chip8 {
 		//finally from 0x00 to 0x4F (0 to 79) is reserved for the fontset
 		//fontset size is 16 * 5 = 80 so 0-79
 		PC: 0x200,
+		I:  0x000,
+		SP: 0x00,
 	}
 }
 
