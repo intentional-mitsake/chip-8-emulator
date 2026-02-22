@@ -105,6 +105,8 @@ func (c *Chip8) LoadROM(path string) error {
 		//from 0x200 to 0xFFF is used for program data and code
 		//ROM is loaded starting at 0x200 (512 in decimal)
 		c.Memory[0x200+i] = data[i]
+		//printing for debugging purposes
+		//fmt.Printf("%d", data[i])
 	}
 	return nil
 }
