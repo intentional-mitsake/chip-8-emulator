@@ -28,5 +28,6 @@ func main() {
 	//shifts to right by 8 bits--> 0x1234 >> 8 = 0x12
 	//b2 := byte(fetchedInst >> 8) //get second inst byte (higher 8 bits)
 	//fmt.Printf("Fetched instruction(In HexCode): 0x%X\nIn Bytes: %v %v\n", fetchedInst, b1, b2)
-	chip8.Render() //render the display (for debugging purposes)
+	fmt.Print("Rendering Display\n")
+	chip8.RenderTerminal()
 }
