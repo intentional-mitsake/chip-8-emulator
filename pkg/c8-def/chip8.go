@@ -1,11 +1,16 @@
 package c8def
 
+import "math/rand"
+
 const (
 	MemSize       = 4096 // 4KB memory
 	RegCount      = 16   // 16 registers (V0 to VF)
 	DisplayWidth  = 64
 	DisplayHeight = 32
 )
+
+//btw to clear confusion later on
+//uint8 and byte are the same thing in GO
 
 type Chip8 struct {
 	Memory [MemSize]byte // 4KB memory
@@ -26,12 +31,38 @@ type Chip8 struct {
 
 func NewChip8() *Chip8 {
 	return &Chip8{
-		PC: 0x200, // Programs start at memory location 0x200
+		//from 0x200 to 0xFFF is used for program and data storage
+		//that is from 512 to 4095 in decimalS
+		//so we initialize the program counter to 0x200 (512) to point to the start of the program memory
+		//from 0x4f to 0x200 is used for C8-VM(79 to 512 in decimal)
+		//finally from 0x00 to 0x4F (0 to 79) is reserved for the fontset
+		//fontset size is 16 * 5 = 80 so 0-79
+		PC: 0x200,
 	}
 }
 
 func (c *Chip8) LoadFontset() {
+	//chip8 has 16 characters(0-F) in its fontset
+	//each char is rep by a 5 byte sprite(5 rows of 8 bits)
+	//hence the size of the fontset is 16 chars * 5 bytes/char = 80 bytes
+	//each row below is a single char from 0 to F, rep by the 5 bytes
 	fontset := [5 * 16]byte{
+		//to understand how these bytes rep the chars,
+		// we can convert each byte to binary and visualize it
+		// for example, the char '0' is rep by the bytes 0xF0, 0x90, 0x90, 0x90, 0xF0
+		// in binary, these bytes are:
+		// 0xF0 = 11110000	->firsst row of the char '0'
+		// 0x90 = 10010000
+		// 0x90 = 10010000
+		// 0x90 = 10010000
+		// 0xF0 = 11110000  _>fifth and last row of the char '0'
+		//visualizing this, 1--> * and 0--> space;
+		// **** // -> 0xF0(first row)
+		// *  * // -> 0x90(second row)
+		// *  * // -> 0x90(third row)
+		// *  * // -> 0x90(fourth row)
+		// **** // -> 0xF0(fifth row)
+		//thus 0
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
 		0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -52,4 +83,12 @@ func (c *Chip8) LoadFontset() {
 	for i := 0; i < len(fontset); i++ {
 		c.Memory[i] = fontset[i]
 	}
+}
+
+func RandNumGen() byte {
+	return byte(rand.Intn(256)) // Gen a random byte (0-255)
+	//need this for the CXNN instruction
+	//used for enemies in games to move randomly or for random events
+	//doesnt need to be truly random, just good enough for games
+	//this should be gud enough
 }
