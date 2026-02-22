@@ -32,6 +32,105 @@ func (c *Chip8) Fetch() uint16 {
 	return inst
 }
 
-func (c *Chip8) Decode(inst uint16) {
+func (c *Chip8) DecodeAndExc(inst uint16) {
+	//16 bit inst--> 0x1NNN, 0x6XNN, etc
+	//to decode, we need to extract the different parts of the inst based on the instruction format
+	//in 1NNN, first 4 bits(nibble) are the opcode(1), next 12 bits are the address(NNN)
+	//so 1 --> opcode, NNN --> address, JUMP to address NNN
+	opcode := inst & 0xF000 //get first 4 bits for opcode--> 0x1NNN AND 0xF000 = 0x1000
+	op8 := inst & 0xF00F    //get first 4 bits and last 4 bits for 8XY0, 8XY1, etc--> 0x8XY0 AND 0xF00F = 0x8000
+	opF := inst & 0xF0FF    //for 0xF000 instructions where last 8 bits vary
+
+	//X register, Y register, 4th bit(some inst need it), last byte(NN) and last 12 bits(NNN)
+	X := (inst & 0x0F00)   // in second byte usually
+	Y := (inst & 0x00F0)   // in third byte usually
+	N := (inst & 0x000F)   // last 4 bits
+	NN := (inst & 0x00FF)  // last 8 bits
+	NNN := (inst & 0x0FFF) // last 12 bits
+	InstSet := NewInstructionSet()
+	switch opcode {
+	case 0x0000:
+		//directly test for the two 00E0 and 00EE instructions since they both have the same opcode
+		if inst == InstSet.Set["Clear"] {
+			c.ClearDisplay()
+		} else if inst == InstSet.Set["Return"] {
+			//return code here
+		}
+	case 0x1000:
+		//JUMP
+	case 0x2000:
+		//CALL
+	case 0x3000:
+		//SKIPEQ
+	case 0x4000:
+		//SKIPNE
+	case 0x5000:
+		//SKIPEQV
+	case 0x6000:
+		//SET
+	case 0x7000:
+		//ADD
+	case 0x8000:
+		//compare op8 value with diff 8000 instructions to determine which one it is
+		switch op8 {
+		case InstSet.Set["Mov"]:
+			//MOV
+		case InstSet.Set["Or"]:
+			//OR
+		case InstSet.Set["And"]:
+			//AND
+		case InstSet.Set["Xor"]:
+			//XOR
+		case InstSet.Set["AddV"]:
+			//ADDV
+		case InstSet.Set["Sub"]:
+			//SUB
+		case InstSet.Set["Shr"]:
+			//SHR
+		case InstSet.Set["SubN"]:
+			//SUBN
+		case InstSet.Set["Shl"]:
+			//SHL
+		}
+	case 0x9000:
+		//SKIPNEV
+	case 0xA000:
+		//SETI
+	case 0xB000:
+		//JUMP0
+	case 0xC000:
+		//RAND
+	case 0xD000:
+		//SPRITE
+	case 0xE000:
+		//compare with E09E and E0A1 to determine which one it is
+		if inst == InstSet.Set["KeyEq"] {
+			//KEYEQ
+		} else if inst == InstSet.Set["KeyNe"] {
+			//KEYNE
+		}
+	case 0xF000:
+		switch opF {
+		case InstSet.Set["GetDelay"]:
+			//GETDELAY
+		case InstSet.Set["WaitKey"]:
+			//WAITKEY
+		case InstSet.Set["SetDelay"]:
+			//SETDELAY
+		case InstSet.Set["SetBuzzer"]:
+			//SETBUZZER
+		case InstSet.Set["AddI"]:
+			//ADDI
+		case InstSet.Set["Hex"]:
+			//HEX
+		case InstSet.Set["Bcd"]:
+			//BCD
+		case InstSet.Set["Save"]:
+			//SAVE
+		case InstSet.Set["Load"]:
+			//LOAD
+		}
+
+	}
 
 }
