@@ -1,6 +1,9 @@
 package c8def
 
-import "math/rand"
+import (
+	"math/rand"
+	"os"
+)
 
 const (
 	MemSize       = 4096 // 4KB memory
@@ -91,4 +94,17 @@ func RandNumGen() byte {
 	//used for enemies in games to move randomly or for random events
 	//doesnt need to be truly random, just good enough for games
 	//this should be gud enough
+}
+
+func (c *Chip8) LoadROM(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(data); i++ {
+		//from 0x200 to 0xFFF is used for program data and code
+		//ROM is loaded starting at 0x200 (512 in decimal)
+		c.Memory[0x200+i] = data[i]
+	}
+	return nil
 }
