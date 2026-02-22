@@ -42,11 +42,11 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 	opF := inst & 0xF0FF    //for 0xF000 instructions where last 8 bits vary
 
 	//X register, Y register, 4th bit(some inst need it), last byte(NN) and last 12 bits(NNN)
-	X := (inst & 0x0F00)   // in second byte usually
-	Y := (inst & 0x00F0)   // in third byte usually
-	N := (inst & 0x000F)   // last 4 bits
-	NN := (inst & 0x00FF)  // last 8 bits
-	NNN := (inst & 0x0FFF) // last 12 bits
+	X := (inst & 0x0F00) >> 8 // in second byte usually, shift right by 8 to get the value of X as a single byte (0-15)
+	Y := (inst & 0x00F0) >> 4 // in third byte usually; we get smth like 0x00A0, >>4 gives 0x000A which is just 0x0A
+	N := (inst & 0x000F)      // last 4 bits--from here on out we need exact 4,8,12 bits so no shifting
+	NN := (inst & 0x00FF)     // last 8 bits
+	NNN := (inst & 0x0FFF)    // last 12 bits
 	InstSet := NewInstructionSet()
 	switch opcode {
 	case 0x0000:
@@ -54,81 +54,185 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		if inst == InstSet.Set["Clear"] {
 			c.ClearDisplay()
 		} else if inst == InstSet.Set["Return"] {
-			//return code here
+			//return from subroutine: remove the last addr from the stack, set PC to that addr
+			c.Stack[c.SP] = 0    //clear the top of the stack
+			c.SP--               //move stack pointer down
+			c.PC = c.Stack[c.SP] //set PC to the addr at the top of the stack
 		}
 	case 0x1000:
 		//JUMP
+		c.PC = NNN //set the PC to the address NNN to jump there
 	case 0x2000:
-		//CALL
+		//CALL: push curr PC onto the stack, incr SP, then set PC to NNN to jump to the subroutine
+		c.SP++               //incr stack pointer to point to the next empty slot
+		c.Stack[c.SP] = c.PC //push current PC onto the stack and incr SP
+		c.PC = NNN           //set PC to NNN to jump to the subroutine
 	case 0x3000:
-		//SKIPEQ
+		//SKIPEQL: skip next inst if VX == NN
+		if c.V[X] == byte(NN) {
+			c.PC += 2 //skip next inst by incr PC by 2
+		}
+
 	case 0x4000:
-		//SKIPNE
+		//SKIPNE: skip next inst if VX != NN
+		if c.V[X] != byte(NN) {
+			c.PC += 2
+		}
+
 	case 0x5000:
-		//SKIPEQV
+		//SKIPEQV: skip next inst if VX == VY
+		if c.V[X] == c.V[Y] {
+			c.PC += 2
+		}
 	case 0x6000:
-		//SET
+		//SET: set VX to NN
+		c.V[X] = byte(NN)
 	case 0x7000:
 		//ADD
+		c.V[X] += byte(NN) //add NN to VX, no need to worry about overflow since it wraps around in byte
 	case 0x8000:
 		//compare op8 value with diff 8000 instructions to determine which one it is
 		switch op8 {
 		case InstSet.Set["Mov"]:
-			//MOV
+			//MOV: set VX = VY
+			c.V[X] = c.V[Y]
 		case InstSet.Set["Or"]:
-			//OR
+			//OR: VX = VX OR VY
+			c.V[X] |= c.V[Y]
 		case InstSet.Set["And"]:
-			//AND
+			//AND: bitwise AND, VX = VX AND VY
+			c.V[X] &= c.V[Y]
 		case InstSet.Set["Xor"]:
 			//XOR
+			c.V[X] ^= c.V[Y]
 		case InstSet.Set["AddV"]:
 			//ADDV
+			sum := uint16(c.V[X]) + uint16(c.V[Y]) //calculate the sum as uint16 to check for overflow
+			c.V[0xF] = 0                           //reset VF before addition
+			c.V[X] = byte(sum)                     //set VX to the sum (wraps around if >255)
+			if sum > 255 {
+				c.V[X] = byte(sum % 256) //wrap around if overflow occurs
+				c.V[0xF] = 1             //set VF to 1 to indicate carry
+			}
 		case InstSet.Set["Sub"]:
 			//SUB
+			diff := int16(c.V[X]) - int16(c.V[Y]) //calculate the difference as int16(need signed int) to check for borrow
+			if diff < 0 {
+				c.V[X] = byte((diff + 256) % 256) //wrap around if borrow occurs
+				c.V[0xF] = 0                      //set VF to 0 to indicate borrow
+			} else {
+				c.V[X] = byte(diff) //no borrow, just set VX to the difference
+				c.V[0xF] = 1        //set VF to 1 to indicate no borrow
+			}
 		case InstSet.Set["Shr"]:
-			//SHR
+			//SHR: if the bit that is shifted out is 1, set VF to 1, else set VF to 0, then shift VX right by 1 bit
+			c.V[0xF] = c.V[X] & 0x1 //the bit that is shifted out is the last bit of VX, so we AND it with 0x1 to get that bit and set VF accordingly
+			c.V[X] >>= 1            //shift VX right by 1 bit
 		case InstSet.Set["SubN"]:
 			//SUBN
+			diff := int16(c.V[Y]) - int16(c.V[X]) //calculate the difference as int16(need signed int) to check for borrow
+			if diff < 0 {
+				c.V[X] = byte((diff + 256) % 256) //wrap around if borrow occurs
+				c.V[0xF] = 0                      //set VF to 0 to indicate borrow
+			} else {
+				c.V[X] = byte(diff) //no borrow, just set VX to the difference
+				c.V[0xF] = 1        //set VF to 1 to indicate no borrow
+			}
 		case InstSet.Set["Shl"]:
-			//SHL
+			//SHL: shift vx left by 1 bit, if the bit that is shifted out is 1, set VF to 1, else set VF to 0
+			c.V[0xF] = (c.V[X] & 0x80)
+			c.V[X] <<= 1
 		}
 	case 0x9000:
-		//SKIPNEV
+		//SKIPNEV: skip next inst if VX != VY
+		if c.V[X] != c.V[Y] {
+			c.PC += 2
+		}
 	case 0xA000:
-		//SETI
+		//SETI: set I = NNN
+		c.I = NNN
 	case 0xB000:
 		//JUMP0
+		c.PC = NNN + uint16(c.V[0]) //jump to address NNN + V0
 	case 0xC000:
 		//RAND
+		randByte := RandNumGen()     //generate a random byte
+		c.V[X] = randByte & byte(NN) //set VX to the result of random byte AND NN
 	case 0xD000:
 		//SPRITE
+		x := c.V[X] % DisplayWidth //get the x coordinate from VX, wrap around if it exceeds display width
+		y := c.V[Y] % DisplayHeight
+		c.V[0xF] = 0 //reset VF before drawing the sprite
+		for row := 0; row < int(N); row++ {
+			spriteByte := c.Memory[c.I+uint16(row)] //get the sprite byte from memory starting at address I
+			for col := 0; col < 8; col++ {
+
+			}
+		} //c.DrawSprite() //draw sprite at (VX,VY) with height N, sprite data is read from memory starting at address I, VF is set to 1 if any pixels are flipped from set to unset when the sprite is drawn, and 0 otherwise
 	case 0xE000:
 		//compare with E09E and E0A1 to determine which one it is
 		if inst == InstSet.Set["KeyEq"] {
-			//KEYEQ
+			//KEYEQ: skip next inst if key with the value of VX is pressed,
+			//we can represent the state of the keys in the Keypad array, where each index corresponds to a key (0-F) and the value is 1 if pressed and 0 if not
+			key := c.V[X] //get the value of VX to determine which key we are checking
+			if c.Keypad[key] {
+				c.PC += 2 //skip next inst if the key is pressed
+			}
 		} else if inst == InstSet.Set["KeyNe"] {
-			//KEYNE
+			//KEYNE: skip next inst if key with the value of VX is not pressed
+			key := c.V[X]
+			if !c.Keypad[key] {
+				c.PC += 2 //skip next inst if the key is not pressed
+			}
 		}
 	case 0xF000:
 		switch opF {
 		case InstSet.Set["GetDelay"]:
-			//GETDELAY
+			//GETDELAY:
+			c.V[X] = c.DT
 		case InstSet.Set["WaitKey"]:
-			//WAITKEY
+			//WAITKEY: wait for a key press and store the value of the key in VX, we can check the Keypad array for any key that is currently pressed, if multiple keys are pressed we can just take the first one we find
+			for i, pressed := range c.Keypad {
+				if pressed {
+					c.V[X] = byte(i) //store the value of the key in VX
+					break            //exit the loop after finding the first pressed key
+				}
+			}
+
 		case InstSet.Set["SetDelay"]:
 			//SETDELAY
+			c.DT = c.V[X] //set the delay timer to the value of VX
 		case InstSet.Set["SetBuzzer"]:
 			//SETBUZZER
+			c.ST = c.V[X] //set the sound timer to the value of VX
 		case InstSet.Set["AddI"]:
 			//ADDI
+			c.I += uint16(c.V[X]) //add the value of VX to I
 		case InstSet.Set["Hex"]:
 			//HEX
+			hexV := c.V[X] & 0x0F //we only need the last nibble(4bits) of vx for this
+			//fontset is stored in 0-79(80 bytes for 16 chars * 5 bytes each)
+			//say hexV is 0x2, we want to set I to the location of the sprite for the char '2' in the fontset,
+			// which starts at index 2*5=10 (since each char takes 5 bytes)
+			c.I = uint16(hexV) * 5 //set I to the location of the sprite for the char in the fontset
 		case InstSet.Set["Bcd"]:
-			//BCD
+			//BCD: store bcd rep of num in VX in memory locations I, I+1, and I+2
+			value := uint16(c.V[X])                   //get the value of VX to convert to BCD
+			c.Memory[c.I] = byte(value / 100)         //hundreds digit
+			c.Memory[c.I+1] = byte((value / 10) % 10) //tens digit
+			c.Memory[c.I+2] = byte(value % 10)        //ones digit
+			//9C--> 156 in decimal--> 1 in hundreds place, 5 in tens place, 6 in ones place
+			//so we store 1 at memory[I], 5 at memory[I+1], and 6 at memory[I+2]
 		case InstSet.Set["Save"]:
-			//SAVE
+			//SAVE: store V0 to VX in memory starting at address I
+			for i := 0; i <= int(X); i++ {
+				c.Memory[c.I+uint16(i)] = c.V[i] //store the value of each register from V0 to VX in memory starting at address I
+			}
 		case InstSet.Set["Load"]:
 			//LOAD
+			for i := 0; i <= int(X); i++ {
+				c.V[i] = c.Memory[c.I+uint16(i)] //load the value of each register from memory starting at address I
+			}
 		}
 
 	}
