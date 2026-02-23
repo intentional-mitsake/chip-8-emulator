@@ -23,7 +23,8 @@ func CleanupTerminal() {
 }
 
 func (c *Chip8) Render() {
-	fmt.Print("\033[H") // move cursor to top-left
+	fmt.Print("\033[H\033[2J") // move to top-left & clear entire screen
+
 	for y := 0; y < 32; y++ {
 		row := ""
 		for x := 0; x < 64; x++ {

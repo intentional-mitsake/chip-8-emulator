@@ -53,10 +53,11 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		//directly test for the two 00E0 and 00EE instructions since they both have the same opcode
 		if inst == InstSet.Set["Clear"] {
 			c.ClearDisplay()
+			c.DrawFlag = true
 		} else if inst == InstSet.Set["Return"] {
 			//return from subroutine: remove the last addr from the stack, set PC to that addr
-			c.PC = c.Stack[c.SP] //set PC to the addr at the top of the stack
-			c.SP--               //point the sp down
+			c.SP--
+			c.PC = c.Stack[c.SP] //set PC to the addr at the top of the stack\
 		}
 	case 0x1000:
 		//JUMP
@@ -191,7 +192,7 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 				}
 			}
 			if !keyPressed {
-				c.PC -= 2
+				c.PC -= 2 //repeat this inst if no key pressed
 			}
 
 		case InstSet.Set["SetDelay"]:

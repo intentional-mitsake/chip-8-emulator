@@ -3,8 +3,49 @@ package main
 import (
 	def "c8-emulation/pkg/c8-def"
 	"fmt"
-	"time"
+	"image/color"
+	"log"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
+
+const (
+	screenWidth  = 64 * 10 // scale each CHIP-8 pixel by 10
+	screenHeight = 32 * 10
+)
+
+type Game struct {
+	Chip8 *def.Chip8
+	Scale float32
+}
+
+func (g *Game) Update() error {
+	// Run CPU cycles
+	g.Chip8.CoreLoop()
+	g.Chip8.UpdateTimers()
+	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	// Draw the CHIP-8 display
+	colOn := color.White
+	colOff := color.Black
+
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 64; x++ {
+			c := colOff
+			if g.Chip8.Display[y*64+x] != 0 {
+				c = colOn
+			}
+			vector.FillRect(screen, float32(x)*g.Scale, float32(y)*g.Scale, g.Scale, g.Scale, c, false)
+		}
+	}
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return 64 * int(g.Scale), 32 * int(g.Scale)
+}
 
 // MEMORY MAP for the CHIP-8 system:
 // 0-79 --> fontset(0-F chars)--> load after initializing the Chip8 struct
@@ -32,18 +73,16 @@ func main() {
 	//b2 := byte(fetchedInst >> 8) //get second inst byte (higher 8 bits)
 	//fmt.Printf("Fetched instruction(In HexCode): 0x%X\nIn Bytes: %v %v\n", fetchedInst, b1, b2)
 	fmt.Print("Starting Emulator...\n")
-	cpuTimer := time.NewTicker(time.Second / 700)  //700 hz cpu
-	timeTicker := time.NewTicker(time.Second / 60) //60 Hz timers
-	for {
-		select {
-		case <-cpuTimer.C:
-			chip8.CoreLoop()
-		case <-timeTicker.C:
-			if chip8.DrawFlag {
-				chip8.Render()
-				chip8.DrawFlag = false
-			}
-			chip8.UpdateTimers()
-		}
+	//disp code is gpt-->i hate graphics prog, fuck sdl2 and ebiton
+	//for gameboy will do myself(hope)
+	game := &Game{
+		Chip8: chip8,
+		Scale: 10,
+	}
+
+	ebiten.SetWindowSize(64*10, 32*10)
+	ebiten.SetWindowTitle("CHIP-8 Emulator")
+	if err := ebiten.RunGame(game); err != nil {
+		log.Fatal(err)
 	}
 }
