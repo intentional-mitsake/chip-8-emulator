@@ -55,9 +55,8 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 			c.ClearDisplay()
 		} else if inst == InstSet.Set["Return"] {
 			//return from subroutine: remove the last addr from the stack, set PC to that addr
-			c.Stack[c.SP] = 0    //clear the top of the stack
-			c.SP--               //move stack pointer down
 			c.PC = c.Stack[c.SP] //set PC to the addr at the top of the stack
+			c.SP--               //point the sp down
 		}
 	case 0x1000:
 		//JUMP
@@ -111,19 +110,16 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 			c.V[0xF] = 0                           //reset VF before addition
 			c.V[X] = byte(sum)                     //set VX to the sum (wraps around if >255)
 			if sum > 255 {
-				c.V[X] = byte(sum % 256) //wrap around if overflow occurs
-				c.V[0xF] = 1             //set VF to 1 to indicate carry
+				c.V[0xF] = 1 //set VF to 1 to indicate carry
 			}
 		case InstSet.Set["Sub"]:
 			//SUB
-			diff := int16(c.V[X]) - int16(c.V[Y]) //calculate the difference as int16(need signed int) to check for borrow
-			if diff < 0 {
-				c.V[X] = byte((diff + 256) % 256) //wrap around if borrow occurs
-				c.V[0xF] = 0                      //set VF to 0 to indicate borrow
+			if c.V[X] > c.V[Y] {
+				c.V[0xF] = 1
 			} else {
-				c.V[X] = byte(diff) //no borrow, just set VX to the difference
-				c.V[0xF] = 1        //set VF to 1 to indicate no borrow
+				c.V[0xF] = 0
 			}
+			c.V[X] -= c.V[Y]
 		case InstSet.Set["Shr"]:
 			//SHR: if the bit that is shifted out is 1, set VF to 1, else set VF to 0, then shift VX right by 1 bit
 			c.V[0xF] = c.V[X] & 0x1 //the bit that is shifted out is the last bit of VX, so we AND it with 0x1 to get that bit and set VF accordingly
@@ -186,11 +182,16 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 			c.V[X] = c.DT
 		case InstSet.Set["WaitKey"]:
 			//WAITKEY: wait for a key press and store the value of the key in VX, we can check the Keypad array for any key that is currently pressed, if multiple keys are pressed we can just take the first one we find
+			keyPressed := false
 			for i, pressed := range c.Keypad {
 				if pressed {
 					c.V[X] = byte(i) //store the value of the key in VX
-					break            //exit the loop after finding the first pressed key
+					keyPressed = true
+					break //exit the loop after finding the first pressed key
 				}
+			}
+			if !keyPressed {
+				c.PC -= 2
 			}
 
 		case InstSet.Set["SetDelay"]:

@@ -2,7 +2,6 @@ package c8def
 
 import (
 	"fmt"
-	"strings"
 )
 
 const (
@@ -23,22 +22,19 @@ func CleanupTerminal() {
 	fmt.Print("\033[?25h")
 }
 
-func (c *Chip8) RenderTerminal() {
-	var builder strings.Builder
-	// Move cursor to 0,0 (Top Left)
-	// \033[H is the "Home" command
-	builder.WriteString("\033[H")
+func (c *Chip8) Render() {
+	fmt.Print("\033[H") // move cursor to top-left
 	for y := 0; y < 32; y++ {
+		row := ""
 		for x := 0; x < 64; x++ {
 			if c.Display[y*64+x] == 1 {
-				builder.WriteString(Green + "██" + Reset)
+				row += "██"
 			} else {
-				builder.WriteString(" ")
+				row += " "
 			}
 		}
-		builder.WriteString("\n")
+		fmt.Println(row)
 	}
-	fmt.Print(builder.String())
 }
 
 func (c *Chip8) ClearDisplay() {
@@ -49,6 +45,7 @@ func (c *Chip8) ClearDisplay() {
 
 func (c *Chip8) DrawSprites(xStart, yStart, height byte) {
 	c.V[0xF] = 0
+	c.DrawFlag = true
 	//fmt.Print(spriteByte)
 	for i := byte(0); i < height; i++ {
 		//a spritebyte is 8 pixels wide(rows) always

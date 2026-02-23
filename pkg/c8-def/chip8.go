@@ -1,6 +1,8 @@
 package c8def
 
-import "os"
+import (
+	"os"
+)
 
 const (
 	MemSize       = 4096 // 4KB memory
@@ -26,8 +28,9 @@ type Chip8 struct {
 	DT byte // Delay timer--> Decrements at a rate of 60Hz
 	ST byte // Sound timer--> produces a sound when >0
 
-	Keypad  [16]bool                           // Hex-Keypad(0-F) state--> Represents the state of the 16 keys
-	Display [DisplayWidth * DisplayHeight]byte // Display state (64x32 pixels)--> Each pixel can be on (1) or off (0)S
+	Keypad   [16]bool                           // Hex-Keypad(0-F) state--> Represents the state of the 16 keys
+	Display  [DisplayWidth * DisplayHeight]byte // Display state (64x32 pixels)--> Each pixel can be on (1) or off (0)S
+	DrawFlag bool                               //gpteed the disp atp, graphics programming is just tedious
 }
 
 func NewChip8() *Chip8 {
@@ -102,4 +105,27 @@ func (c *Chip8) LoadROM(path string) error {
 		//fmt.Printf("%d", data[i])
 	}
 	return nil
+}
+
+func (c *Chip8) UpdateTimers() {
+	if c.DT > 0 {
+		c.DT--
+	}
+	if c.ST > 0 {
+		c.ST--
+		//sound play here
+	}
+}
+
+func (c *Chip8) UpdateKeypad(char rune, state bool) {
+	mapping := map[rune]int{
+		'1': 0x1, '2': 0x2, '3': 0x3, '4': 0xC,
+		'q': 0x4, 'w': 0x5, 'e': 0x6, 'r': 0xD,
+		'a': 0x7, 's': 0x8, 'd': 0x9, 'f': 0xE,
+		'z': 0xA, 'x': 0x0, 'c': 0xB, 'v': 0xF,
+	}
+
+	if index, ok := mapping[char]; ok {
+		c.Keypad[index] = state
+	}
 }
