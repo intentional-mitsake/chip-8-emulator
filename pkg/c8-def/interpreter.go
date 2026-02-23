@@ -162,7 +162,6 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		//SPRITE
 		x := c.V[X] % DisplayWidth //get the x coordinate from VX, wrap around if it exceeds display width
 		y := c.V[Y] % DisplayHeight
-		c.V[0xF] = 0 //reset VF before drawing the sprite
 		c.DrawSprites(x, y, byte(N))
 	case 0xE000:
 		//compare with E09E and E0A1 to determine which one it is
@@ -232,4 +231,9 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 
 	}
 
+}
+
+func (c *Chip8) CoreLoop() {
+	inst := c.Fetch()
+	c.DecodeAndExc(inst)
 }
