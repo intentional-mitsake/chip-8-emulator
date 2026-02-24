@@ -125,7 +125,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		//running
 		screen.Fill(color.Black)
 		scaling := &ebiten.DrawImageOptions{}
-		scaling.GeoM.Scale(10, 10)
+		//same to make pixels square, if diff, rectangle
+		//pixels is waht thsi effects nto display/screen size
+		scaling.GeoM.Scale(20, 20) //this scaling effects whats drawn on teh screen
 		screen.DrawImage(g.display, scaling)
 	case false:
 		//not running
@@ -134,6 +136,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 }
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	//this scaling defines the size of the window nto the size of the piexls on screen
 	return 640, 320
 }
 
@@ -164,6 +167,22 @@ func (g *Game) Menu() {
 }
 
 func (g *Game) DrawMenu(screen *ebiten.Image) {
+	const (
+		colWidth    = 100 //space btwn each cols
+		lineHeight  = 50  //space btwn each row
+		itemsPerCol = 5   //each col has 5 items
+		//tinkered with thse a bit to get the right feel
+		startX = 90 //horizontal dist from left edge of screen
+		startY = 50 // vertical dist from top edge of screen
+	)
+	headerOp := &text.DrawOptions{}
+	headerOp.ColorScale.ScaleWithColor(color.RGBA{0, 128, 128, 255}) // Your Olive Green
+
+	// Position the header at the top center
+	headerOp.PrimaryAlign = text.AlignCenter
+	headerOp.GeoM.Translate(320, 10) // Assuming 640 width
+
+	text.Draw(screen, "--- CHIP-8 ROMS ---", g.FontFace, headerOp)
 	for i, rom := range g.Roms {
 		//looping thru roms and printing
 		label := rom
@@ -171,26 +190,27 @@ func (g *Game) DrawMenu(screen *ebiten.Image) {
 		//thought that was a problem, but the Draw func draws the screen at 60fps
 		//this was printing the name at same time as the game is running
 		//not a problem
-		//fmt.Println(label)
-		if g.Selected < offset {
-			offset = g.Selected
-		} else if g.Selected >= offset+visible {
-			offset = g.Selected - visible + 1
-		}
-		for j := 0; j < visible; j++ {
-			romIndx := j + offset
-			if romIndx >= len(g.Roms) {
-				break
-			}
-			if i == g.Selected {
-				label = ">> " + rom
-			}
-			op := &text.DrawOptions{}
-			op.GeoM = g.DrawOpts.GeoM
-			lineSpacing := 24.0
-			op.GeoM.Translate(0, float64(i)*lineSpacing)
-			text.Draw(screen, label, g.FontFace, op)
+		//fmt.Println(label
+		//5 per col, when reach indx of new col colnum value changes(0, 1, 2, 3, 4)
+		colNum := i / itemsPerCol //0/5 = 0, 1/5 = 0, 2/5 = 0.... 5/5 = 1, 6/5 = 1, 7/5 = 1.... 10/5 = 2, 11/5 = 2...
+		rowNum := i % itemsPerCol // 0%5 = 0, 1%5 = 1, 2%5 = 2
 
+		op := &text.DrawOptions{}
+		//based on init offset values we can push text up and down like this
+		x := startX + (float64(colNum) * colWidth) //for 2nd col--> 90(startX) + (1 * 100(colWidth))--> 190
+		//for 3rd col--> 190(startX) + (2 * 100(colWidth))--> 290
+		y := startY + (float64(rowNum) * lineHeight) //for 2nd row--> 40(startY) + (1 * 50(lineHeight))--> 90
+		op.GeoM.Translate(x, y)
+
+		if i == g.Selected {
+			label = ">> " + rom + " <<"
+			op.ColorScale.ScaleWithColor(color.RGBA{255, 204, 0, 255})
+			text.Draw(screen, label, g.FontFace, op)
+		} else {
+			op.ColorScale.ScaleWithColor(color.RGBA{155, 188, 15, 255})
+			op.ColorScale.Scale(0, 1, 1, 1)
+			text.Draw(screen, label, g.FontFace, op)
 		}
+
 	}
 }
