@@ -167,6 +167,32 @@ func (g *Game) Menu() {
 		if g.Selected < 0 {
 			g.Selected = len(g.Roms) - 1
 		}
+
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowLeft) {
+		g.Selected -= 5 //calculted this
+		if g.Selected < 0 {
+			if g.Selected+25 >= len(g.Roms) {
+				//each row has 5 roms, total 23 roms, so last two rows have 4 roms only, for those row last item is 4th
+				g.Selected += 20
+			} else {
+				g.Selected += 20 + 5 //negate 5 subtracts 5 to make it positive
+			}
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowRight) {
+		g.Selected += 5
+		if g.Selected >= len(g.Roms) {
+			if g.Selected-25 < 0 {
+				//each row has 5 roms, total 23 roms, so last two rows have 4 roms only, for those row last item is 4th
+				g.Selected -= 20
+			} else {
+				g.Selected -= 20 + 5 //negate 5 subtracts 5 to make it positive
+			}
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		os.Exit(0)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
