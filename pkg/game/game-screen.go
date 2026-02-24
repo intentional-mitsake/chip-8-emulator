@@ -72,22 +72,27 @@ func GetRoms() []string {
 }
 
 func (g *Game) rebuildDisplay() {
+	//this is callded every frame to redraw the display
 	pixels := make([]byte, DisplayWidth*DisplayHeight*4) // RGBA
 
 	for i := 0; i < DisplayWidth*DisplayHeight; i++ {
 		if g.Chip8.Display[i] == 1 {
-			pixels[i*4+0] = 255 // R
-			pixels[i*4+1] = 255 // G
-			pixels[i*4+2] = 255 // B
+			//		pixels are this color
+			pixels[i*4+0] = 155 // R
+			pixels[i*4+1] = 188 // G
+			pixels[i*4+2] = 015 // B
 			pixels[i*4+3] = 255 // A
 		} else {
-			pixels[i*4+0] = 0
-			pixels[i*4+1] = 0
-			pixels[i*4+2] = 0
+			//background is this color
+			pixels[i*4+0] = 15
+			pixels[i*4+1] = 25
+			pixels[i*4+2] = 15
 			pixels[i*4+3] = 255
 		}
 	}
-
+	//ebiten creates a window
+	//we draw g.display over it
+	//here we aare replacing individual pixels on the dispaly image we drew
 	g.display.ReplacePixels(pixels)
 }
 
@@ -95,43 +100,48 @@ func (g *Game) Update() error {
 	switch g.GameState {
 	case true:
 		//running
+		for i := 0; i < 10; i++ {
+			//reason for 10 is: chip8 ran around 500-1000 inst per second
+			g.Chip8.CoreLoop()
+		}
+		//timers
+		if g.Chip8.DT > 0 {
+			g.Chip8.DT--
+		}
+		if g.Chip8.ST > 0 {
+			g.Chip8.ST--
+			//sound trigger here
+		}
+		//draw screen
+		if g.Chip8.DrawFlag {
+			g.rebuildDisplay()
+			g.Chip8.DrawFlag = false
+		}
+
 	case false:
 		//not running - menu
 		g.Menu()
 	}
-	/*for i := 0; i < 10; i++ {
-		//reason for 10 is: chip8 ran around 500-1000 inst per second
-		g.Chip8.CoreLoop()
-	}
-	//timers
-	if g.Chip8.DT > 0 {
-		g.Chip8.DT--
-	}
-	if g.Chip8.ST > 0 {
-		g.Chip8.ST--
-		//sound trigger here
-	}
-	//draw screen
-	if g.Chip8.DrawFlag {
-		g.rebuildDisplay()
-		g.Chip8.DrawFlag = false
-	}
-	*/
 	return nil
 }
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.GameState {
 	case true:
 		//running
-		screen.Fill(color.Black)
+		//screen.Fill(color.RGBA{15, 30, 15, 255})
 		scaling := &ebiten.DrawImageOptions{}
 		//same to make pixels square, if diff, rectangle
 		//pixels is waht thsi effects nto display/screen size
-		scaling.GeoM.Scale(20, 20) //this scaling effects whats drawn on teh screen
+		scaling.GeoM.Scale(10, 10) //this scaling effects whats drawn on teh screen
+		//filter det how image is scaled
+		//nearest looked best(pixelated was similar), linear was worst
+		scaling.Filter = ebiten.FilterNearest
+		//fading effect on pixels
+		scaling.ColorScale.SetA(0.3)
 		screen.DrawImage(g.display, scaling)
 	case false:
 		//not running
-		screen.Fill(color.Black)
+		screen.Fill(color.RGBA{15, 20, 30, 255})
 		g.DrawMenu(screen)
 	}
 }
@@ -160,9 +170,10 @@ func (g *Game) Menu() {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		fmt.Println(g.Roms[g.Selected])
-		//g.Chip8.LoadROM()
-		//g.GameState = true //run game
+		//fmt.Println(g.Roms[g.Selected])
+		romPath := "./pkg/assets/" + g.Roms[g.Selected]
+		g.Chip8.LoadROM(romPath)
+		g.GameState = true //run game
 	}
 }
 
@@ -176,7 +187,7 @@ func (g *Game) DrawMenu(screen *ebiten.Image) {
 		startY = 50 // vertical dist from top edge of screen
 	)
 	headerOp := &text.DrawOptions{}
-	headerOp.ColorScale.ScaleWithColor(color.RGBA{0, 128, 128, 255}) // Your Olive Green
+	headerOp.ColorScale.ScaleWithColor(color.RGBA{150, 160, 200, 255})
 
 	// Position the header at the top center
 	headerOp.PrimaryAlign = text.AlignCenter
@@ -201,13 +212,13 @@ func (g *Game) DrawMenu(screen *ebiten.Image) {
 		//for 3rd col--> 190(startX) + (2 * 100(colWidth))--> 290
 		y := startY + (float64(rowNum) * lineHeight) //for 2nd row--> 40(startY) + (1 * 50(lineHeight))--> 90
 		op.GeoM.Translate(x, y)
-
+		op.Filter = ebiten.FilterPixelated
 		if i == g.Selected {
 			label = ">> " + rom + " <<"
-			op.ColorScale.ScaleWithColor(color.RGBA{255, 204, 0, 255})
+			op.ColorScale.ScaleWithColor(color.RGBA{218, 165, 32, 255})
 			text.Draw(screen, label, g.FontFace, op)
 		} else {
-			op.ColorScale.ScaleWithColor(color.RGBA{155, 188, 15, 255})
+			op.ColorScale.ScaleWithColor(color.RGBA{150, 160, 180, 255})
 			op.ColorScale.Scale(0, 1, 1, 1)
 			text.Draw(screen, label, g.FontFace, op)
 		}

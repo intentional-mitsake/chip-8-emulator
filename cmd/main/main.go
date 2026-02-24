@@ -32,11 +32,14 @@ func main() {
 	//%v prints value in a default format
 	//%+v prints struct with field names
 	//fmt.Printf("Initialized Chip8: %+v\n", chip8)
-	romPath := "./pkg/assets/INVADERS"
-	err := game.Chip8.LoadROM(romPath)
-	if err != nil {
-		fmt.Printf("Error loading ROM: %v\n", err)
-	}
+	/*
+		romPath := "./pkg/assets/INVADERS"
+		err := game.Chip8.LoadROM(romPath)
+		if err != nil {
+			fmt.Printf("Error loading ROM: %v\n", err)
+		}
+	*/
 	//this function starts the game and handles the game loop
 	ebiten.RunGame(game)
+
 }
