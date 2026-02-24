@@ -47,14 +47,13 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 	N := (inst & 0x000F)      // last 4 bits--from here on out we need exact 4,8,12 bits so no shifting
 	NN := (inst & 0x00FF)     // last 8 bits
 	NNN := (inst & 0x0FFF)    // last 12 bits
-	InstSet := NewInstructionSet()
 	switch opcode {
 	case 0x0000:
 		//directly test for the two 00E0 and 00EE instructions since they both have the same opcode
-		if inst&0xF0FF == InstSet.Set["Clear"] {
+		if inst&0xF0FF == c.InstSet.Set["Clear"] {
 			c.ClearDisplay()
 			c.DrawFlag = true
-		} else if inst == InstSet.Set["Return"] {
+		} else if inst == c.InstSet.Set["Return"] {
 			//return from subroutine: remove the last addr from the stack, set PC to that addr
 			c.SP--
 			c.PC = c.Stack[c.SP] //set PC to the addr at the top of the stack\
@@ -64,8 +63,8 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		c.PC = NNN //set the PC to the address NNN to jump there
 	case 0x2000:
 		//CALL: push curr PC onto the stack, incr SP, then set PC to NNN to jump to the subroutine
-		c.SP++               //incr stack pointer to point to the next empty slot
 		c.Stack[c.SP] = c.PC //push current PC onto the stack and incr SP
+		c.SP++               //incr stack pointer to point to the next empty slot
 		c.PC = NNN           //set PC to NNN to jump to the subroutine
 	case 0x3000:
 		//SKIPEQL: skip next inst if VX == NN
@@ -93,19 +92,19 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 	case 0x8000:
 		//compare op8 value with diff 8000 instructions to determine which one it is
 		switch op8 {
-		case InstSet.Set["Mov"]:
+		case c.InstSet.Set["Mov"]:
 			//MOV: set VX = VY
 			c.V[X] = c.V[Y]
-		case InstSet.Set["Or"]:
+		case c.InstSet.Set["Or"]:
 			//OR: VX = VX OR VY
 			c.V[X] |= c.V[Y]
-		case InstSet.Set["And"]:
+		case c.InstSet.Set["And"]:
 			//AND: bitwise AND, VX = VX AND VY
 			c.V[X] &= c.V[Y]
-		case InstSet.Set["Xor"]:
+		case c.InstSet.Set["Xor"]:
 			//XOR
 			c.V[X] ^= c.V[Y]
-		case InstSet.Set["AddV"]:
+		case c.InstSet.Set["AddV"]:
 			//ADDV
 			sum := uint16(c.V[X]) + uint16(c.V[Y]) //calculate the sum as uint16 to check for overflow
 			c.V[0xF] = 0                           //reset VF before addition
@@ -113,19 +112,19 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 			if sum > 255 {
 				c.V[0xF] = 1 //set VF to 1 to indicate carry
 			}
-		case InstSet.Set["Sub"]:
+		case c.InstSet.Set["Sub"]:
 			//SUB
-			if c.V[X] > c.V[Y] {
+			if c.V[X] >= c.V[Y] {
 				c.V[0xF] = 1
 			} else {
 				c.V[0xF] = 0
 			}
 			c.V[X] -= c.V[Y]
-		case InstSet.Set["Shr"]:
+		case c.InstSet.Set["Shr"]:
 			//SHR: if the bit that is shifted out is 1, set VF to 1, else set VF to 0, then shift VX right by 1 bit
 			c.V[0xF] = c.V[X] & 0x1 //the bit that is shifted out is the last bit of VX, so we AND it with 0x1 to get that bit and set VF accordingly
 			c.V[X] >>= 1            //shift VX right by 1 bit
-		case InstSet.Set["SubN"]:
+		case c.InstSet.Set["SubN"]:
 			//SUBN
 			diff := int16(c.V[Y]) - int16(c.V[X]) //calculate the difference as int16(need signed int) to check for borrow
 			if diff < 0 {
@@ -135,9 +134,9 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 				c.V[X] = byte(diff) //no borrow, just set VX to the difference
 				c.V[0xF] = 1        //set VF to 1 to indicate no borrow
 			}
-		case InstSet.Set["Shl"]:
+		case c.InstSet.Set["Shl"]:
 			//SHL: shift vx left by 1 bit, if the bit that is shifted out is 1, set VF to 1, else set VF to 0
-			c.V[0xF] = (c.V[X] & 0x80)
+			c.V[0xF] = (c.V[X] >> 7) & 0x1
 			c.V[X] <<= 1
 		}
 	case 0x9000:
@@ -162,14 +161,14 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		c.DrawSprites(x, y, byte(N))
 	case 0xE000:
 		//compare with E09E and E0A1 to determine which one it is
-		if inst&0xF0FF == InstSet.Set["KeyEq"] { //need to mask the 2nd nibble as the opcode is 0xE-value-9E
+		if inst&0xF0FF == c.InstSet.Set["KeyEq"] { //need to mask the 2nd nibble as the opcode is 0xE-value-9E
 			//KEYEQ: skip next inst if key with the value of VX is pressed,
 			//we can represent the state of the keys in the Keypad array, where each index corresponds to a key (0-F) and the value is 1 if pressed and 0 if not
 			key := c.V[X] //get the value of VX to determine which key we are checking
 			if c.Keypad[key] {
 				c.PC += 2 //skip next inst if the key is pressed
 			}
-		} else if inst == InstSet.Set["KeyNe"] {
+		} else if inst == c.InstSet.Set["KeyNe"] {
 			//KEYNE: skip next inst if key with the value of VX is not pressed
 			key := c.V[X]
 			if !c.Keypad[key] {
@@ -178,10 +177,10 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		}
 	case 0xF000:
 		switch opF {
-		case InstSet.Set["GetDelay"]:
+		case c.InstSet.Set["GetDelay"]:
 			//GETDELAY:
 			c.V[X] = c.DT
-		case InstSet.Set["WaitKey"]:
+		case c.InstSet.Set["WaitKey"]:
 			//WAITKEY: wait for a key press and store the value of the key in VX, we can check the Keypad array for any key that is currently pressed, if multiple keys are pressed we can just take the first one we find
 			keyPressed := false
 			for i, pressed := range c.Keypad {
@@ -195,23 +194,23 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 				c.PC -= 2 //repeat this inst if no key pressed
 			}
 
-		case InstSet.Set["SetDelay"]:
+		case c.InstSet.Set["SetDelay"]:
 			//SETDELAY
 			c.DT = c.V[X] //set the delay timer to the value of VX
-		case InstSet.Set["SetBuzzer"]:
+		case c.InstSet.Set["SetBuzzer"]:
 			//SETBUZZER
 			c.ST = c.V[X] //set the sound timer to the value of VX
-		case InstSet.Set["AddI"]:
+		case c.InstSet.Set["AddI"]:
 			//ADDI
 			c.I += uint16(c.V[X]) //add the value of VX to I
-		case InstSet.Set["Hex"]:
+		case c.InstSet.Set["Hex"]:
 			//HEX
 			hexV := c.V[X] & 0x0F //we only need the last nibble(4bits) of vx for this
 			//fontset is stored in 0-79(80 bytes for 16 chars * 5 bytes each)
 			//say hexV is 0x2, we want to set I to the location of the sprite for the char '2' in the fontset,
 			// which starts at index 2*5=10 (since each char takes 5 bytes)
 			c.I = uint16(hexV) * 5 //set I to the location of the sprite for the char in the fontset
-		case InstSet.Set["Bcd"]:
+		case c.InstSet.Set["Bcd"]:
 			//BCD: store bcd rep of num in VX in memory locations I, I+1, and I+2
 			value := uint16(c.V[X])                   //get the value of VX to convert to BCD
 			c.Memory[c.I] = byte(value / 100)         //hundreds digit
@@ -219,12 +218,12 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 			c.Memory[c.I+2] = byte(value % 10)        //ones digit
 			//9C--> 156 in decimal--> 1 in hundreds place, 5 in tens place, 6 in ones place
 			//so we store 1 at memory[I], 5 at memory[I+1], and 6 at memory[I+2]
-		case InstSet.Set["Save"]:
+		case c.InstSet.Set["Save"]:
 			//SAVE: store V0 to VX in memory starting at address I
 			for i := 0; i <= int(X); i++ {
 				c.Memory[c.I+uint16(i)] = c.V[i] //store the value of each register from V0 to VX in memory starting at address I
 			}
-		case InstSet.Set["Load"]:
+		case c.InstSet.Set["Load"]:
 			//LOAD
 			for i := 0; i <= int(X); i++ {
 				c.V[i] = c.Memory[c.I+uint16(i)] //load the value of each register from memory starting at address I
