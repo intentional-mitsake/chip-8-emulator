@@ -31,6 +31,7 @@ type Chip8 struct {
 	Keypad   [16]bool                           // Hex-Keypad(0-F) state--> Represents the state of the 16 keys
 	Display  [DisplayWidth * DisplayHeight]byte // Display state (64x32 pixels)--> Each pixel can be on (1) or off (0)S
 	DrawFlag bool                               //gpteed the disp atp, graphics programming is just tedious
+	InstSet  InstructionSet
 }
 
 func NewChip8() *Chip8 {
@@ -41,9 +42,10 @@ func NewChip8() *Chip8 {
 		//from 0x4f to 0x200 is used for C8-VM(79 to 512 in decimal)
 		//finally from 0x00 to 0x4F (0 to 79) is reserved for the fontset
 		//fontset size is 16 * 5 = 80 so 0-79
-		PC: 0x200,
-		I:  0x000,
-		SP: 0x00,
+		PC:      0x200,
+		I:       0x000,
+		SP:      0x00,
+		InstSet: *NewInstructionSet(),
 	}
 }
 

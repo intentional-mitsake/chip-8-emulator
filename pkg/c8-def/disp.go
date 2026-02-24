@@ -1,7 +1,6 @@
 package c8def
 
 const (
-	Scale = 10
 	Green = "\033[32m"
 	Reset = "\033[0m"
 )

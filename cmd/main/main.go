@@ -1,11 +1,10 @@
 package main
 
 import (
-	def "c8-emulation/pkg/c8-def"
+	"c8-emulation/pkg/game"
 	"fmt"
 
-	_ "github.com/hajimehoshi/ebiten/v2"
-	_ "github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -19,16 +18,6 @@ const (
 // 512-4095 --> Program/ROM/Stack/General purpose registers/Index register/Timers/Keypad/Display
 
 func main() {
-	chip8 := def.NewChip8()
-	chip8.LoadFontset() //load the fontset first before loading the ROM
-	//%v prints value in a default format
-	//%+v prints struct with field names
-	//fmt.Printf("Initialized Chip8: %+v\n", chip8)
-	romPath := "./pkg/assets/INVADERS"
-	err := chip8.LoadROM(romPath)
-	if err != nil {
-		fmt.Printf("Error loading ROM: %v\n", err)
-	}
 	//fmt.Printf("Memory after loading ROM: %v\n", chip8.Memory)
 	//fetchedInst := chip8.Fetch()
 	//b2 gets lower 8 bits--> 0x1234--> b2=0x34 and b1 gets higher 8 bits--> 0x12
@@ -38,4 +27,16 @@ func main() {
 	//fmt.Printf("Fetched instruction(In HexCode): 0x%X\nIn Bytes: %v %v\n", fetchedInst, b1, b2)
 	fmt.Print("Starting Emulator...\n")
 	//disp
+	game := game.NewGame()
+	game.Chip8.LoadFontset() //load the fontset first before loading the ROM
+	//%v prints value in a default format
+	//%+v prints struct with field names
+	//fmt.Printf("Initialized Chip8: %+v\n", chip8)
+	romPath := "./pkg/assets/INVADERS"
+	err := game.Chip8.LoadROM(romPath)
+	if err != nil {
+		fmt.Printf("Error loading ROM: %v\n", err)
+	}
+	//this function starts the game and handles the game loop
+	ebiten.RunGame(game)
 }
