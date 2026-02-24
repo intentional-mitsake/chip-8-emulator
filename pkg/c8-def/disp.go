@@ -1,10 +1,5 @@
 package c8def
 
-const (
-	Green = "\033[32m"
-	Reset = "\033[0m"
-)
-
 func (c *Chip8) ClearDisplay() {
 	for i := range c.Display {
 		c.Display[i] = 0 // Set all pixels to off (0)
