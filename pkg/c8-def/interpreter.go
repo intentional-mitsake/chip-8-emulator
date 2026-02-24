@@ -51,7 +51,7 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 	switch opcode {
 	case 0x0000:
 		//directly test for the two 00E0 and 00EE instructions since they both have the same opcode
-		if inst == InstSet.Set["Clear"] {
+		if inst&0xF0FF == InstSet.Set["Clear"] {
 			c.ClearDisplay()
 			c.DrawFlag = true
 		} else if inst == InstSet.Set["Return"] {
@@ -162,7 +162,7 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 		c.DrawSprites(x, y, byte(N))
 	case 0xE000:
 		//compare with E09E and E0A1 to determine which one it is
-		if inst == InstSet.Set["KeyEq"] {
+		if inst&0xF0FF == InstSet.Set["KeyEq"] { //need to mask the 2nd nibble as the opcode is 0xE-value-9E
 			//KEYEQ: skip next inst if key with the value of VX is pressed,
 			//we can represent the state of the keys in the Keypad array, where each index corresponds to a key (0-F) and the value is 1 if pressed and 0 if not
 			key := c.V[X] //get the value of VX to determine which key we are checking

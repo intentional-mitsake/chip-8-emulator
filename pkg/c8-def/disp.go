@@ -1,42 +1,10 @@
 package c8def
 
-import (
-	"fmt"
-)
-
 const (
 	Scale = 10
 	Green = "\033[32m"
 	Reset = "\033[0m"
 )
-
-func SetupTerminal() {
-	// Hide cursor: \033[?25l
-	// Clear screen: \033[2J
-	fmt.Print("\033[2J\033[?25l")
-}
-
-// Call this when the program exits
-func CleanupTerminal() {
-	// Show cursor: \033[?25h
-	fmt.Print("\033[?25h")
-}
-
-func (c *Chip8) Render() {
-	fmt.Print("\033[H\033[2J") // move to top-left & clear entire screen
-
-	for y := 0; y < 32; y++ {
-		row := ""
-		for x := 0; x < 64; x++ {
-			if c.Display[y*64+x] == 1 {
-				row += "██"
-			} else {
-				row += " "
-			}
-		}
-		fmt.Println(row)
-	}
-}
 
 func (c *Chip8) ClearDisplay() {
 	for i := range c.Display {
@@ -46,7 +14,6 @@ func (c *Chip8) ClearDisplay() {
 
 func (c *Chip8) DrawSprites(xStart, yStart, height byte) {
 	c.V[0xF] = 0
-	c.DrawFlag = true
 	//fmt.Print(spriteByte)
 	for i := byte(0); i < height; i++ {
 		//a spritebyte is 8 pixels wide(rows) always
@@ -75,6 +42,7 @@ func (c *Chip8) DrawSprites(xStart, yStart, height byte) {
 				}
 				//flip the pixel-XOR
 				c.Display[index] ^= 1
+				c.DrawFlag = true //only if pixels change
 			}
 		}
 	}
