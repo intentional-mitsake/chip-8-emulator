@@ -534,7 +534,7 @@ func (g *Game) Help(screen *ebiten.Image) {
 	textCnfg.Filter = ebiten.FilterNearest
 	//for each line
 	textCnfg.GeoM.Reset()
-	textCnfg.GeoM.Translate(640, 60) //middle horizontally and and lil down from top
+	textCnfg.GeoM.Translate(500, 60) //middle horizontally and and lil down from top
 	textCnfg.PrimaryAlign = text.AlignCenter
 	textCnfg.ColorScale.ScaleWithColor(ACTIVEKEY)
 	text.Draw(screen, "---- HOW TO USE THE EMULATOR ----", g.FontFace, textCnfg)
@@ -556,17 +556,21 @@ func (g *Game) Help(screen *ebiten.Image) {
 
 	for i, line := range gameKeys {
 		textCnfg.GeoM.Reset()
+		//each line is 120 pixels from left edge of screen
+		//each line is 130 + i*30 pixels from top i.e 130, 160, 190, 220
+		//so new line for each
 		textCnfg.GeoM.Translate(120, float64(130+(i*30)))
 		text.Draw(screen, line, g.FontFace, textCnfg)
 	}
 
-	// --- SYSTEM KEYS ---
+	//SYSTEM KEYS
 	specKeys := []string{
 		"> SYSTEM CONTROLS",
-		"[BKSP]   ->  Hard Reset",
-		"[P]      ->  Pause/Resume",
-		"[N]      ->  Step Next Cycle",
-		"[H]      ->  Close Manual",
+		"[BKSP]          ->  Hard Reset: Clears Memory and Registers, Chip 8 in Initial State",
+		"[P]             ->  Pause/Resume: Stops the Fetch-Exc Cycle of the Chip or resumes it.",
+		"[N]             ->  New Game: Resets Chip8 to initial state and loads ROM again.",
+		"[H]             ->  Help Manual.",
+		"[ESC] [Ctrl+C]  ->  Exit App.",
 	}
 
 	for i, line := range specKeys {
@@ -575,11 +579,11 @@ func (g *Game) Help(screen *ebiten.Image) {
 		text.Draw(screen, line, g.FontFace, textCnfg)
 	}
 
-	// --- FOOTER (The Intentional Mistake) ---
+	//footer
 	textCnfg.GeoM.Reset()
 	textCnfg.GeoM.Translate(500, 540)
 	textCnfg.PrimaryAlign = text.AlignCenter
 	textCnfg.ColorScale.Reset()
-	textCnfg.ColorScale.ScaleWithColor(color.RGBA{200, 50, 50, 255}) // Red for the mistake
+	textCnfg.ColorScale.ScaleWithColor(color.RGBA{200, 50, 50, 255})
 	text.Draw(screen, "CHIP8 EMULATION INTENTIONAL-MITSAKE", g.FontFace, textCnfg)
 }
