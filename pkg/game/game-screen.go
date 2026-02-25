@@ -528,7 +528,6 @@ func (g *Game) Help(screen *ebiten.Image) {
 	//fill the entire screen
 	screen.Fill(color.RGBA{5, 20, 10, 230})
 	vector.StrokeRect(screen, 50, 20, 900, 560, 4, color.RGBA{0, 200, 80, 255}, false)
-
 	//HEADER
 	textCnfg := &text.DrawOptions{}
 	textCnfg.Filter = ebiten.FilterNearest
