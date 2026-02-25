@@ -28,7 +28,8 @@ type Chip8 struct {
 	DT byte // Delay timer--> Decrements at a rate of 60Hz
 	ST byte // Sound timer--> produces a sound when >0
 
-	Keypad   [16]bool                           // Hex-Keypad(0-F) state--> Represents the state of the 16 keys
+	//standard CHIP-8 keypad has 16 keys for all Hex Fonts(0-F), I have added four more for (exit, pause, newgame and help)
+	Keypad   [20]bool                           // Hex-Keypad(0-F) state--> Represents the state of the 16 keys
 	Display  [DisplayWidth * DisplayHeight]byte // Display state (64x32 pixels)--> Each pixel can be on (1) or off (0)S
 	DrawFlag bool                               //gpteed the disp atp, graphics programming is just tedious
 	InstSet  InstructionSet

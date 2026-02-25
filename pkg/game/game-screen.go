@@ -21,12 +21,15 @@ const (
 
 var statChnge = true
 var KEYPADCOLOR = color.RGBA{55, 65, 50, 255}
-var INACTIVEKEY = color.RGBA{45, 50, 55, 255}
 var ACTIVEKEY = color.RGBA{255, 204, 0, 255}
+var KEYBG = color.RGBA{30, 35, 50, 255}      // Deep Slate Blue (Dim)
+var KEYBORDER = color.RGBA{60, 90, 160, 255} // Bold Steel Blue
 var STATPADCOLOR = color.RGBA{10, 15, 20, 255}
 var STATSCOLOR = color.RGBA{0, 255, 255, 255}
 var BORDERCOLOR = color.RGBA{0, 40, 60, 255}
-var BORDEREDGE = color.RGBA{180, 0, 80, 255}
+var GRIDCOLOR = color.RGBA{5, 15, 40, 255}
+var GRIDBORDER = color.RGBA{40, 70, 140, 255}
+var SPECIALINACTIVE = color.RGBA{30, 40, 60, 255} // Deep Midnight Blue
 
 var offset int = 0 //indx of first visibile rom
 
@@ -45,6 +48,8 @@ type Game struct {
 	//stats
 	updtC int
 	stats map[string]any //keys are string and values are any
+	//for key press effect for all 20 keys(hex keys + 4 additional ones)
+	keyTime [20]int
 }
 
 func NewGame() *Game {
@@ -167,6 +172,9 @@ func (g *Game) Update() error {
 		//not running - menu
 		g.Menu()
 	}
+
+	//Input
+	g.HandleKeyPad()
 	return nil
 }
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -321,6 +329,7 @@ func (g *Game) DrawSubscreen(screen *ebiten.Image) {
 	rightHeight := 640 //right subscreen for keypad covers the whole height
 	//for hex keypad
 	vector.FillRect(screen, 640, 0, float32(rightWidth), float32(rightHeight), KEYPADCOLOR, false)
+	g.DrawKeypad(screen, rightWidth, rightHeight, 20, 640, 0)
 	//BORDER-->if we do this before, the border will be covered by subscreens
 	//-->window size(1000, 640)-->line needs to be betwn top half(game) and statpad
 	//game(top half)-->640,320-->so line needs to be at 320 on Y and needs to cover whole X .i.e 0 to 1000 on x
@@ -348,7 +357,9 @@ func (g *Game) DrawStatpad(screen *ebiten.Image, footerHeight, gridWidht, lineHe
 		if statName == "Stack" || statName == "V" {
 			boxWidth = 400 //smtimes needs 400
 		}
-		vector.FillRect(screen, float32(x-5), float32(y-15), float32(boxWidth), 50, color.RGBA{20, 20, 40, 255}, false)
+		statCnfg.ColorScale.ScaleWithColor(STATSCOLOR)
+		vector.FillRect(screen, float32(x-5), float32(y-15), float32(boxWidth+10), 60, GRIDBORDER, false)
+		vector.FillRect(screen, float32(x), float32(y-10), float32(boxWidth), 50, GRIDCOLOR, false)
 		text.Draw(screen, fmt.Sprintf("%v: %v ", statName, stat), g.FontFace, statCnfg)
 	}
 	//PC-->GRID 1
@@ -377,4 +388,83 @@ func (g *Game) DrawStatpad(screen *ebiten.Image, footerHeight, gridWidht, lineHe
 	x, y = getPos(1, 3)
 	printStat(x, y, "V", g.stats["V"])
 
+}
+
+func (g *Game) DrawKeypad(screen *ebiten.Image, keypadWidth, keypadHeight, padding, startX, startY int) {
+	titleCnfg := &text.DrawOptions{}
+	titleCnfg.Filter = ebiten.FilterNearest
+	centerX := startX + keypadWidth/2
+	titleCnfg.PrimaryAlign = text.AlignCenter //to center the text on the given pos
+	titleCnfg.GeoM.Translate(float64(centerX), float64(startY+40))
+	titleCnfg.ColorScale.ScaleWithColor(ACTIVEKEY)
+	text.Draw(screen, "---Hex Keypad---", g.FontFace, titleCnfg)
+	//key text config
+	keyCnfg := &text.DrawOptions{}
+	for i := 0; i < 20; i++ {
+		keyCnfg.GeoM.Reset()
+		//inverted this to rotate the keypad
+		//if colNUm = i/4 and rowNum = i%4
+		//then first row of keypad: 1 Q A Z
+		//when use this inverted we get first row of keypad: 1 2 3 4
+		colNum := i % 4
+		rowNum := i / 4
+		//fig the best thru tiral and erro
+		gridLength := keypadWidth / 4
+		x := startX + padding - 10 + colNum*gridLength //without the 8, the keypad shifts a lil more to left and last keys touch border
+		y := startY + padding + 80 + rowNum*gridLength //to push the keypad down even more than padding
+		keyCnfg.Filter = ebiten.FilterNearest
+		keyCnfg.ColorScale.ScaleWithColor(color.Black)
+		keyCnfg.GeoM.Translate(float64(x+(gridLength-padding)/2), float64(y+(gridLength-padding)/2))
+		keyN, byteVal := GetKey(i)
+		keyCnfg.PrimaryAlign = text.AlignCenter
+		keyCnfg.SecondaryAlign = text.AlignCenter // Centers vertically too!
+		//check if the effect should be active
+		effectActive := g.keyTime[i] > 0
+		if i > 15 && effectActive {
+			//the -8 and +8 is adjusted to give the feel of key being presesd or unpressed
+			//prettry much shifting the pos of either the first rect or the second rect for htis
+			vector.FillRect(screen, float32(x-8), float32(y-8), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
+			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), ACTIVEKEY, false)
+			text.Draw(screen, fmt.Sprintf("%s", keyN), g.FontFace, keyCnfg)
+		} else if effectActive {
+			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
+			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), ACTIVEKEY, false)
+			text.Draw(screen, fmt.Sprintf("%s-->%X", keyN, byteVal), g.FontFace, keyCnfg)
+		} else if i > 15 {
+			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
+			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), SPECIALINACTIVE, false)
+			keyCnfg.ColorScale.ScaleWithColor(color.White)
+			text.Draw(screen, fmt.Sprintf("%s", keyN), g.FontFace, keyCnfg)
+		} else {
+			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
+			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), KEYBORDER, false)
+			text.Draw(screen, fmt.Sprintf("%s-->%X", keyN, byteVal), g.FontFace, keyCnfg)
+		}
+
+	}
+}
+
+func (g *Game) HandleKeyPad() {
+	//continously reset keypad
+	for i := range g.Chip8.Keypad {
+		g.Chip8.Keypad[i] = false
+	}
+	//using inpoututil.IsKeyJustPressed cuz it returns true for first frame only so no multi clicks on one press effect
+	for k, v := range keyMap {
+		if inpututil.IsKeyJustPressed(k) {
+			g.Chip8.Keypad[v] = true
+			print(fmt.Sprintf("Pressed: %v\n", k))
+			fmt.Println(v)
+			//if key was pressed put a timer to hold the effect
+			//byte from 0x0 to 0xF to 20 its pretty much 0-20
+			g.keyTime[v] = 10
+		}
+	}
+
+	for i := 0; i < 20; i++ {
+		//if key isnt active and time is up, reset
+		if !g.Chip8.Keypad[i] && g.keyTime[i] > 0 {
+			g.keyTime[i]--
+		}
+	}
 }
