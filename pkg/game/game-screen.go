@@ -24,7 +24,8 @@ var INACTIVEKEY = color.RGBA{45, 50, 55, 255}
 var ACTIVEKEY = color.RGBA{255, 204, 0, 255}
 var STATPADCOLOR = color.RGBA{10, 15, 20, 255}
 var STATSCOLOR = color.RGBA{0, 255, 255, 255}
-var BORDERCOLOR = color.RGBA{45, 55, 65, 255}
+var BORDERCOLOR = color.RGBA{0, 40, 60, 255}
+var BORDEREDGE = color.RGBA{255, 180, 6, 180}
 
 var offset int = 0 //indx of first visibile rom
 
@@ -270,12 +271,11 @@ func (g *Game) DrawSubscreen(screen *ebiten.Image) {
 	//FOOTER--STATPAD
 	footerWidth := 1000 //whole window should be covered-->window stats set in main.go
 	footerHeight := 320 //all the height left below the game/ tinkered to figure out
-	borderWidth := 4
-	vector.StrokeLine(screen, 0, 320, float32(footerWidth), float32(footerHeight), float32(borderWidth), BORDERCOLOR, false)
-	gridWidht := 80 //tinkered to figure out
-	padding := 10   //tinkered to figure out
+	gridWidht := 80     //tinkered to figure out
+	padding := 10       //tinkered to figure out
 	lineHeight := 20
 	//for V, I, PC, SP,..
+	//also it might be better to pass footerW and footer Widht here before 0,320
 	vector.FillRect(screen, 0, 320, float32(footerWidth), float32(footerHeight), STATPADCOLOR, false)
 	/*stats := map[string]any{
 		"V":     g.Chip8.V,
@@ -327,4 +327,17 @@ func (g *Game) DrawSubscreen(screen *ebiten.Image) {
 	rightHeight := 320 //same heigt as game disp
 	//for hex keypad
 	vector.FillRect(screen, 640, 0, float32(rightWidth), float32(rightHeight), KEYPADCOLOR, false)
+	//BORDER-->if we do this before, the border will be covered by subscreens
+	//-->window size(1000, 640)-->line needs to be betwn top half(game) and statpad
+	//game(top half)-->640,320-->so line needs to be at 320 on Y and needs to cover whole X .i.e 0 to 1000 on x
+	//(1000, 320)-(0, 320)= (1000, 320) covers whole X at 320 Y
+	g.DrawBorder(screen, 1000, 320, 0, 320)
+	//vertical border
+	g.DrawBorder(screen, 640, 320, 640, 0) //starts at(640, 0), ends at (640, 320) a line that covers 0-320 on Y at X=640
+}
+
+func (g *Game) DrawBorder(screen *ebiten.Image, borderLength, borderHeight, startX, startY int) {
+	borderWidth := 8
+	vector.StrokeLine(screen, float32(borderLength), float32(borderHeight), float32(startX), float32(startY), float32(borderWidth), BORDERCOLOR, false)
+
 }
