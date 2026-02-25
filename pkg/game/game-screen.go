@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
 )
 
@@ -17,6 +18,13 @@ const (
 	DisplayHeight = 32
 	visible       = 10
 )
+
+var KEYPADCOLOR = color.RGBA{55, 65, 50, 255}
+var INACTIVEKEY = color.RGBA{45, 50, 55, 255}
+var ACTIVEKEY = color.RGBA{255, 204, 0, 255}
+var STATPADCOLOR = color.RGBA{10, 15, 20, 255}
+var STATSCOLOR = color.RGBA{0, 255, 255, 255}
+var BORDERCOLOR = color.RGBA{45, 55, 65, 255}
 
 var offset int = 0 //indx of first visibile rom
 
@@ -37,6 +45,8 @@ type Game struct {
 func NewGame() *Game {
 	c8 := def.NewChip8()
 	roms := GetRoms()
+	settings := &text.DrawOptions{}
+	settings.GeoM.Translate(0, 0)
 	return &Game{
 		GameState: false, //not running at start
 		Roms:      roms,
@@ -47,10 +57,7 @@ func NewGame() *Game {
 			DisplayHeight,
 		),
 		FontFace: text.NewGoXFace(basicfont.Face7x13),
-		DrawOpts: &text.DrawOptions{
-			// Embedded fields:
-
-		},
+		DrawOpts: settings,
 	}
 }
 
@@ -137,17 +144,24 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		//nearest looked best(pixelated was similar), linear was worst
 		scaling.Filter = ebiten.FilterNearest
 		//fading effect on pixels
-		scaling.ColorScale.SetA(0.3)
-		screen.DrawImage(g.display, scaling)
+		scaling.ColorScale.SetA(1.0)
+		//top-left
+		scaling.GeoM.Translate(0, 0)
+		screen.DrawImage(g.display, scaling) //takes img as arg and draws it on the screen image
+
+		//SUBSCreen
+		g.DrawSubscreen(screen)
 	case false:
 		//not running
 		screen.Fill(color.RGBA{15, 20, 30, 255})
 		g.DrawMenu(screen)
+		g.DrawSubscreen(screen)
 	}
 }
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	//this scaling defines the size of the window nto the size of the piexls on screen
-	return 640, 320
+	//this way we can det the size of the window
+	return outsideWidth, outsideHeight
 }
 
 func (g *Game) Menu() {
@@ -217,7 +231,7 @@ func (g *Game) DrawMenu(screen *ebiten.Image) {
 
 	// Position the header at the top center
 	headerOp.PrimaryAlign = text.AlignCenter
-	headerOp.GeoM.Translate(320, 10) // Assuming 640 width
+	headerOp.GeoM.Translate(320, 10) // center in 640
 
 	text.Draw(screen, "--- CHIP-8 ROMS ---", g.FontFace, headerOp)
 	for i, rom := range g.Roms {
@@ -240,7 +254,7 @@ func (g *Game) DrawMenu(screen *ebiten.Image) {
 		op.GeoM.Translate(x, y)
 		op.Filter = ebiten.FilterPixelated
 		if i == g.Selected {
-			label = ">> " + rom + " <<"
+			label = ">>" + rom + "<<"
 			op.ColorScale.ScaleWithColor(color.RGBA{218, 165, 32, 255})
 			text.Draw(screen, label, g.FontFace, op)
 		} else {
@@ -250,4 +264,67 @@ func (g *Game) DrawMenu(screen *ebiten.Image) {
 		}
 
 	}
+}
+
+func (g *Game) DrawSubscreen(screen *ebiten.Image) {
+	//FOOTER--STATPAD
+	footerWidth := 1000 //whole window should be covered-->window stats set in main.go
+	footerHeight := 320 //all the height left below the game/ tinkered to figure out
+	borderWidth := 4
+	vector.StrokeLine(screen, 0, 320, float32(footerWidth), float32(footerHeight), float32(borderWidth), BORDERCOLOR, false)
+	gridWidht := 80 //tinkered to figure out
+	padding := 10   //tinkered to figure out
+	lineHeight := 20
+	//for V, I, PC, SP,..
+	vector.FillRect(screen, 0, 320, float32(footerWidth), float32(footerHeight), STATPADCOLOR, false)
+	/*stats := map[string]any{
+		"V":     g.Chip8.V,
+		"I":     g.Chip8.I,
+		"PC":    g.Chip8.PC,
+		"SP":    g.Chip8.SP,
+		"DT":    g.Chip8.DT,
+		"ST":    g.Chip8.ST,
+		"Stack": g.Chip8.Stack[0:8], //not all 16, just 8
+	}*/
+	statCnfg := &text.DrawOptions{}
+	statCnfg.Filter = ebiten.FilterNearest
+	getPos := func(col, row int) (float64, float64) {
+		return float64(padding) + (float64(col) * float64(gridWidht)), (float64(footerHeight) + float64(padding)) + (float64(row) * float64(lineHeight))
+	}
+	//PC-->GRID 1
+	x, y := getPos(0, 0)
+	//fmt.Print(getPos(0, 0))
+	statCnfg.GeoM.Translate(x, y)
+	text.Draw(screen, fmt.Sprintf("PC: %v", g.Chip8.PC), g.FontFace, statCnfg)
+	//I-->GRID 2
+	statCnfg.GeoM.Reset() //wihtout this, translate stacks(adds) and pos is wrong
+	x, y = getPos(0, 1)   // same col, next row
+	statCnfg.GeoM.Translate(x, y)
+	text.Draw(screen, fmt.Sprintf("I: %v", g.Chip8.I), g.FontFace, statCnfg)
+	//SP-->GRID 3
+	statCnfg.GeoM.Reset()
+	x, y = getPos(0, 2)
+	statCnfg.GeoM.Translate(x, y)
+	text.Draw(screen, fmt.Sprintf("SP: %v", g.Chip8.SP), g.FontFace, statCnfg)
+	//DT-->GRID 4
+	statCnfg.GeoM.Reset()
+	x, y = getPos(0, 3)
+	statCnfg.GeoM.Translate(x, y)
+	text.Draw(screen, fmt.Sprintf("DT: %v", g.Chip8.DT), g.FontFace, statCnfg)
+	//ST-->GRID 5
+	statCnfg.GeoM.Reset()
+	x, y = getPos(0, 4)
+	statCnfg.GeoM.Translate(x, y)
+	text.Draw(screen, fmt.Sprintf("ST: %v", g.Chip8.ST), g.FontFace, statCnfg)
+	//Stack-->GRID 6
+	statCnfg.GeoM.Reset()
+	x, y = getPos(1, 0)
+	statCnfg.GeoM.Translate(x, y)
+	text.Draw(screen, fmt.Sprintf("Stack: %v", g.Chip8.Stack[0:8]), g.FontFace, statCnfg)
+	//RIGHT SUBSCREEN--HEX KEYPAD
+	//right side of game screen rect-->starts at 640 on x and 0 on y
+	rightWidth := 360  //1000 is widht of disp, 640 is game-->right side = 1000 - 640= 360
+	rightHeight := 320 //same heigt as game disp
+	//for hex keypad
+	vector.FillRect(screen, 640, 0, float32(rightWidth), float32(rightHeight), KEYPADCOLOR, false)
 }

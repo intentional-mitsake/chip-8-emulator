@@ -40,6 +40,8 @@ func main() {
 		}
 	*/
 	//this function starts the game and handles the game loop
+	ebiten.SetWindowSize(1000, 640) //to get a larger disp
+
 	ebiten.RunGame(game)
 
 }
