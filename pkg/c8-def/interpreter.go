@@ -38,8 +38,9 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 	//in 1NNN, first 4 bits(nibble) are the opcode(1), next 12 bits are the address(NNN)
 	//so 1 --> opcode, NNN --> address, JUMP to address NNN
 	opcode := inst & 0xF000 //get first 4 bits for opcode--> 0x1NNN AND 0xF000 = 0x1000
-	op8 := inst & 0xF00F    //get first 4 bits and last 4 bits for 8XY0, 8XY1, etc--> 0x8XY0 AND 0xF00F = 0x8000
-	opF := inst & 0xF0FF    //for 0xF000 instructions where last 8 bits vary
+	c.Opcode = opcode
+	op8 := inst & 0xF00F //get first 4 bits and last 4 bits for 8XY0, 8XY1, etc--> 0x8XY0 AND 0xF00F = 0x8000
+	opF := inst & 0xF0FF //for 0xF000 instructions where last 8 bits vary
 
 	//X register, Y register, 4th bit(some inst need it), last byte(NN) and last 12 bits(NNN)
 	X := (inst & 0x0F00) >> 8 // in second byte usually, shift right by 8 to get the value of X as a single byte (0-15)

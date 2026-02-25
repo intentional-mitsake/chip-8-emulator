@@ -32,6 +32,7 @@ type Chip8 struct {
 	Display  [DisplayWidth * DisplayHeight]byte // Display state (64x32 pixels)--> Each pixel can be on (1) or off (0)S
 	DrawFlag bool                               //gpteed the disp atp, graphics programming is just tedious
 	InstSet  InstructionSet
+	Opcode   uint16 //opcode of current instruction
 }
 
 func NewChip8() *Chip8 {
