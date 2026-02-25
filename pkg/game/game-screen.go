@@ -25,7 +25,7 @@ var ACTIVEKEY = color.RGBA{255, 204, 0, 255}
 var STATPADCOLOR = color.RGBA{10, 15, 20, 255}
 var STATSCOLOR = color.RGBA{0, 255, 255, 255}
 var BORDERCOLOR = color.RGBA{0, 40, 60, 255}
-var BORDEREDGE = color.RGBA{255, 180, 6, 180}
+var BORDEREDGE = color.RGBA{180, 0, 80, 255}
 
 var offset int = 0 //indx of first visibile rom
 
@@ -108,7 +108,7 @@ func (g *Game) Update() error {
 	switch g.GameState {
 	case true:
 		//running
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 8; i++ {
 			//reason for 10 is: chip8 ran around 500-1000 inst per second
 			g.Chip8.CoreLoop()
 		}
@@ -314,7 +314,7 @@ func (g *Game) DrawStatpad(screen *ebiten.Image, footerHeight, gridWidht, lineHe
 		return float64(padding) + (float64(col) * float64(gridWidht)), (float64(footerHeight) + float64(padding)) + (float64(row) * float64(lineHeight))
 	}
 	printStat := func(x, y float64, statName string, stat any) {
-		statCnfg.GeoM.Reset()
+		statCnfg.GeoM.Reset() //translate stacks(adds) for each stat	so we need to clear pos input by prev stat
 		statCnfg.GeoM.Translate(x, y)
 		text.Draw(screen, fmt.Sprintf("%v: %v", statName, stat), g.FontFace, statCnfg)
 	}
@@ -337,4 +337,10 @@ func (g *Game) DrawStatpad(screen *ebiten.Image, footerHeight, gridWidht, lineHe
 	//Stack-->GRID 6
 	x, y = getPos(1, 0)
 	printStat(x, y, "Stack", g.Chip8.Stack[0:8])
+	//V-->GRID 7
+	x, y = getPos(1, 1)
+	printStat(x, y, "V", g.Chip8.V)
+	//OPCODE-->GRID 8
+	x, y = getPos(1, 2)
+	printStat(x, y, "Opcode", g.Chip8.Opcode)
 }
