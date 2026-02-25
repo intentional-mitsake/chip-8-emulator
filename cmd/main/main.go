@@ -3,6 +3,9 @@ package main
 import (
 	"c8-emulation/pkg/game"
 	"fmt"
+	"image"
+	"image/png"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -39,9 +42,24 @@ func main() {
 			fmt.Printf("Error loading ROM: %v\n", err)
 		}
 	*/
+	icon := loadImg("./pkg/assets/img/icon.png")
+	ebiten.SetWindowIcon(icon)
 	//this function starts the game and handles the game loop
 	ebiten.SetWindowSize(1000, 640) //to get a larger disp
 
 	ebiten.RunGame(game)
 
+}
+
+func loadImg(path string) []image.Image {
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer f.Close()
+	img, err := png.Decode(f)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return []image.Image{img}
 }
