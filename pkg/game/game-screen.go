@@ -38,6 +38,7 @@ type Game struct {
 	GameState bool     //running(true) or paused(false)
 	Roms      []string //arrat of all available roms
 	Selected  int      //index of currently selected rom
+	RomState  bool
 	//Chip-8 def and ebiten image
 	Chip8   *def.Chip8    //first we need to create a chip8 struct
 	display *ebiten.Image // then a display image diff from the disp attr of chip8
@@ -127,12 +128,15 @@ func (g *Game) Update() error {
 	switch g.GameState {
 	case true:
 		//running
-		for i := 0; i < 10; i++ {
-			//reason for 10 is: chip8 ran around 500-1000 inst per second
-			//ebiten runs at 60fps, with the i<10, we run the core loop 10 times each frame
-			//chip 8 runs at appx 600Hz, so we run the core loop 10 times each frame, 60 frames per second
-			//so 600 inst per second
-			g.Chip8.CoreLoop()
+		//if the gaem is running run the core loop, if paused do nothing
+		if g.RomState {
+			for i := 0; i < 10; i++ {
+				//reason for 10 is: chip8 ran around 500-1000 inst per second
+				//ebiten runs at 60fps, with the i<10, we run the core loop 10 times each frame
+				//chip 8 runs at appx 600Hz, so we run the core loop 10 times each frame, 60 frames per second
+				//so 600 inst per second
+				g.Chip8.CoreLoop()
+			}
 		}
 		//input
 		g.HandleKeyPad()
@@ -260,6 +264,7 @@ func (g *Game) Menu() {
 		romPath := "./pkg/assets/" + g.Roms[g.Selected]
 		g.Chip8.LoadROM(romPath)
 		g.GameState = true //run game
+		g.RomState = true  //rom is runnign
 	}
 }
 
@@ -452,19 +457,26 @@ func (g *Game) HandleKeyPad() {
 	//using inpoututil.IsKeyJustPressed cuz it returns true for first frame only so no multi clicks on one press effect
 	for k, v := range keyMap {
 		if v > 15 {
-			//for special keys
-			//switched to ebiten.IsKeyPressed cuz in actual game, just first frame result isnt enough, need all frames key press result
-			if ebiten.IsKeyPressed(k) {
+			//for special keys will continue using inpututil cuz we need just first frame and its enough
+			if inpututil.IsKeyJustPressed(k) {
 				g.Chip8.Keypad[v] = true
 				print(fmt.Sprintf("Pressed: %v\n", k))
 				switch k {
 				case ebiten.KeyBackspace:
-					g.Chip8.Reset()
-					g.GameState = false
+					g.Chip8.Reset()     //reset chip and clear disp
+					g.GameState = false //change gamestate to go back to the menu
 				case ebiten.KeyP:
-
+					//no need to return to menu and reset chip8, just toggle pause
+					if g.RomState {
+						g.RomState = false
+					} else {
+						g.RomState = true
+					}
 				case ebiten.KeyN:
-
+					g.Chip8.Reset()
+					// a new rom isnt loaded in the reset func, only fontset is loaded
+					romPath := "./pkg/assets/" + g.Roms[g.Selected]
+					g.Chip8.LoadROM(romPath)
 				case ebiten.KeyEscape:
 
 				case ebiten.KeySpace:
