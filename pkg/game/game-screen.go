@@ -51,6 +51,8 @@ type Game struct {
 	stats map[string]any //keys are string and values are any
 	//for key press effect for all 20 keys(hex keys + 4 additional ones)
 	keyTime [20]int
+	//help screen
+	HelpState bool
 }
 
 func NewGame() *Game {
@@ -79,6 +81,7 @@ func NewGame() *Game {
 			"V":      0,
 			"Opcode": 0,
 		},
+		HelpState: false,
 	}
 }
 
@@ -174,14 +177,16 @@ func (g *Game) Update() error {
 			g.stats["Opcode"] = g.Chip8.Opcode
 			g.updtC = 0
 		}
-
 	case false:
 		//not running - menu
 		g.Menu()
+		//input
+		g.HandleKeyPad()
 	}
 	return nil
 }
 func (g *Game) Draw(screen *ebiten.Image) {
+
 	switch g.GameState {
 	case true:
 		//running
@@ -201,11 +206,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		//SUBSCreen
 		g.DrawSubscreen(screen)
+		if g.HelpState {
+			g.Help(screen)
+		}
 	case false:
 		//not running
 		screen.Fill(color.RGBA{15, 20, 30, 255})
 		g.DrawMenu(screen)
 		g.DrawSubscreen(screen)
+		if g.HelpState {
+			g.Help(screen)
+		}
 	}
 }
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -474,13 +485,20 @@ func (g *Game) HandleKeyPad() {
 					}
 				case ebiten.KeyN:
 					g.Chip8.Reset()
+					g.RomState = true //if press N while paused, romstate is false, so need to press P again
+					//but with thsi, even if paused no need to press P again after pressing N
 					// a new rom isnt loaded in the reset func, only fontset is loaded
 					romPath := "./pkg/assets/" + g.Roms[g.Selected]
 					g.Chip8.LoadROM(romPath)
-				case ebiten.KeyEscape:
-
-				case ebiten.KeySpace:
-
+				case ebiten.KeyH:
+					g.HelpState = !g.HelpState //toggle it
+					if g.HelpState {
+						//first pause the game then show the help screen
+						g.RomState = false
+					} else {
+						g.RomState = true
+						g.HelpState = false
+					}
 				}
 				g.keyTime[v] = 10
 			}
@@ -503,4 +521,65 @@ func (g *Game) HandleKeyPad() {
 			g.keyTime[i]--
 		}
 	}
+}
+
+func (g *Game) Help(screen *ebiten.Image) {
+
+	//fill the entire screen
+	screen.Fill(color.RGBA{5, 20, 10, 230})
+	vector.StrokeRect(screen, 50, 20, 900, 560, 4, color.RGBA{0, 200, 80, 255}, false)
+
+	//HEADER
+	textCnfg := &text.DrawOptions{}
+	textCnfg.Filter = ebiten.FilterNearest
+	//for each line
+	textCnfg.GeoM.Reset()
+	textCnfg.GeoM.Translate(640, 60) //middle horizontally and and lil down from top
+	textCnfg.PrimaryAlign = text.AlignCenter
+	textCnfg.ColorScale.ScaleWithColor(ACTIVEKEY)
+	text.Draw(screen, "---- HOW TO USE THE EMULATOR ----", g.FontFace, textCnfg)
+
+	//GAME KEYS (Hex)
+	// Shift to Left Align for the list
+	textCnfg.PrimaryAlign = text.AlignStart
+	textCnfg.ColorScale.Reset()
+	textCnfg.ColorScale.ScaleWithColor(color.RGBA{140, 255, 170, 255})
+
+	gameKeys := []string{
+		"> GAME KEYS (0-F ONLY)",
+		"KEYBOARD ->  HEX VALUE",
+		"1 2 3 4  ->  HEX 1 2 3 C",
+		"Q W E R  ->  HEX 4 5 6 D",
+		"A S D F  ->  HEX 7 8 9 E",
+		"Z X C V  ->  HEX A 0 B F",
+	}
+
+	for i, line := range gameKeys {
+		textCnfg.GeoM.Reset()
+		textCnfg.GeoM.Translate(120, float64(130+(i*30)))
+		text.Draw(screen, line, g.FontFace, textCnfg)
+	}
+
+	// --- SYSTEM KEYS ---
+	specKeys := []string{
+		"> SYSTEM CONTROLS",
+		"[BKSP]   ->  Hard Reset",
+		"[P]      ->  Pause/Resume",
+		"[N]      ->  Step Next Cycle",
+		"[H]      ->  Close Manual",
+	}
+
+	for i, line := range specKeys {
+		textCnfg.GeoM.Reset()
+		textCnfg.GeoM.Translate(120, float64(320+(i*30)))
+		text.Draw(screen, line, g.FontFace, textCnfg)
+	}
+
+	// --- FOOTER (The Intentional Mistake) ---
+	textCnfg.GeoM.Reset()
+	textCnfg.GeoM.Translate(500, 540)
+	textCnfg.PrimaryAlign = text.AlignCenter
+	textCnfg.ColorScale.Reset()
+	textCnfg.ColorScale.ScaleWithColor(color.RGBA{200, 50, 50, 255}) // Red for the mistake
+	text.Draw(screen, "CHIP8 EMULATION INTENTIONAL-MITSAKE", g.FontFace, textCnfg)
 }
