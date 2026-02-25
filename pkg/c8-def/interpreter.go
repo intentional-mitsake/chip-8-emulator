@@ -166,10 +166,11 @@ func (c *Chip8) DecodeAndExc(inst uint16) {
 			//KEYEQ: skip next inst if key with the value of VX is pressed,
 			//we can represent the state of the keys in the Keypad array, where each index corresponds to a key (0-F) and the value is 1 if pressed and 0 if not
 			key := c.V[X] //get the value of VX to determine which key we are checking
+			//fmt.Println("Checking key:", key, "State:", c.Keypad[key])
 			if c.Keypad[key] {
 				c.PC += 2 //skip next inst if the key is pressed
 			}
-		} else if inst == c.InstSet.Set["KeyNe"] {
+		} else if inst&0xF0FF == c.InstSet.Set["KeyNe"] {
 			//KEYNE: skip next inst if key with the value of VX is not pressed
 			key := c.V[X]
 			if !c.Keypad[key] {
