@@ -136,6 +136,7 @@ func (g *Game) Update() error {
 		}
 		//input
 		g.HandleKeyPad()
+
 		//timers
 		if g.Chip8.DT > 0 {
 			g.Chip8.DT--
@@ -450,14 +451,37 @@ func (g *Game) HandleKeyPad() {
 	}
 	//using inpoututil.IsKeyJustPressed cuz it returns true for first frame only so no multi clicks on one press effect
 	for k, v := range keyMap {
-		//switched to ebiten.IsKeyPressed cuz in actual game, just first frame result isnt enough, need all frames key press result
-		if ebiten.IsKeyPressed(k) {
-			g.Chip8.Keypad[v] = true
-			print(fmt.Sprintf("Pressed: %v\n", k))
-			fmt.Println(v)
-			//if key was pressed put a timer to hold the effect
-			//byte from 0x0 to 0xF to 20 its pretty much 0-20
-			g.keyTime[v] = 10
+		if v > 15 {
+			//for special keys
+			//switched to ebiten.IsKeyPressed cuz in actual game, just first frame result isnt enough, need all frames key press result
+			if ebiten.IsKeyPressed(k) {
+				g.Chip8.Keypad[v] = true
+				print(fmt.Sprintf("Pressed: %v\n", k))
+				switch k {
+				case ebiten.KeyBackspace:
+					g.Chip8.Reset()
+					g.GameState = false
+				case ebiten.KeyP:
+
+				case ebiten.KeyN:
+
+				case ebiten.KeyEscape:
+
+				case ebiten.KeySpace:
+
+				}
+				g.keyTime[v] = 10
+			}
+		} else {
+			//switched to ebiten.IsKeyPressed cuz in actual game, just first frame result isnt enough, need all frames key press result
+			if ebiten.IsKeyPressed(k) {
+				g.Chip8.Keypad[v] = true
+				print(fmt.Sprintf("Pressed: %v\n", k))
+				fmt.Println(v)
+				//if key was pressed put a timer to hold the effect
+				//byte from 0x0 to 0xF to 20 its pretty much 0-20
+				g.keyTime[v] = 10
+			}
 		}
 	}
 

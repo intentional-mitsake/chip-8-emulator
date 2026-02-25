@@ -120,3 +120,17 @@ func (c *Chip8) UpdateTimers() {
 		//sound play here
 	}
 }
+
+func (c *Chip8) Reset() {
+	//clearing the memory and registers
+	c.PC = 0x200
+	c.I = 0
+	c.DT = 0
+	c.ST = 0
+	c.SP = 0
+	c.Stack = [16]uint16{}
+	c.Memory = [4096]byte{}
+	c.V = [16]byte{}
+	c.LoadFontset()
+	c.ClearDisplay()
+}
