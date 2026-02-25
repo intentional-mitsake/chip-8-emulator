@@ -19,6 +19,7 @@ const (
 	visible       = 10
 )
 
+var statChnge = true
 var KEYPADCOLOR = color.RGBA{55, 65, 50, 255}
 var INACTIVEKEY = color.RGBA{45, 50, 55, 255}
 var ACTIVEKEY = color.RGBA{255, 204, 0, 255}
@@ -41,6 +42,9 @@ type Game struct {
 	//for menu
 	FontFace text.Face
 	DrawOpts *text.DrawOptions
+	//stats
+	updtC int
+	stats map[string]any //keys are string and values are any
 }
 
 func NewGame() *Game {
@@ -59,6 +63,16 @@ func NewGame() *Game {
 		),
 		FontFace: text.NewGoXFace(basicfont.Face7x13),
 		DrawOpts: settings,
+		stats: map[string]any{
+			"PC":     0,
+			"I":      0,
+			"SP":     0,
+			"DT":     0,
+			"ST":     0,
+			"Stack":  0,
+			"V":      0,
+			"Opcode": 0,
+		},
 	}
 }
 
@@ -108,8 +122,11 @@ func (g *Game) Update() error {
 	switch g.GameState {
 	case true:
 		//running
-		for i := 0; i < 8; i++ {
+		for i := 0; i < 10; i++ {
 			//reason for 10 is: chip8 ran around 500-1000 inst per second
+			//ebiten runs at 60fps, with the i<10, we run the core loop 10 times each frame
+			//chip 8 runs at appx 600Hz, so we run the core loop 10 times each frame, 60 frames per second
+			//so 600 inst per second
 			g.Chip8.CoreLoop()
 		}
 		//timers
@@ -124,6 +141,26 @@ func (g *Game) Update() error {
 		if g.Chip8.DrawFlag {
 			g.rebuildDisplay()
 			g.Chip8.DrawFlag = false
+		}
+		//without this check, stats will be updated every frame
+		//so it flickers really fast and we cant see shit
+		//enitengine runs the game at 60 fps so witout this check, stats will be updated every frame
+		//with this check, stats will be updated every 10 frames(update counter>10)
+		//we can incr the num in updC>num to slow it down even more
+		//**NOTE** due to this we only see a snap/part of the changing stats, not whole chagens
+		//for that we remove this and then cant see shit
+		//so its  a tradeoff to be able to see some chagne or not seeing anyting dur to speed
+		g.updtC++
+		if g.updtC >= 10 {
+			g.stats["PC"] = g.Chip8.PC
+			g.stats["I"] = g.Chip8.I
+			g.stats["SP"] = g.Chip8.SP
+			g.stats["DT"] = g.Chip8.DT
+			g.stats["ST"] = g.Chip8.ST
+			g.stats["Stack"] = g.Chip8.Stack
+			g.stats["V"] = g.Chip8.V
+			g.stats["Opcode"] = g.Chip8.Opcode
+			g.updtC = 0
 		}
 
 	case false:
@@ -269,37 +306,28 @@ func (g *Game) DrawMenu(screen *ebiten.Image) {
 
 func (g *Game) DrawSubscreen(screen *ebiten.Image) {
 	//FOOTER--STATPAD
-	footerWidth := 1000 //whole window should be covered-->window stats set in main.go
+	footerWidth := 640  //statpad should cover same width as game but below it
 	footerHeight := 320 //all the height left below the game/ tinkered to figure out
-	gridWidht := 80     //tinkered to figure out
-	padding := 30       //tinkered to figure out
-	lineHeight := 20
+	gridWidht := 200    //tinkered to figure out
+	padding := 80       //tinkered to figure out
+	lineHeight := 30
 	//for V, I, PC, SP,..
 	//also it might be better to pass footerW and footer Widht here before 0,320
 	vector.FillRect(screen, 0, 320, float32(footerWidth), float32(footerHeight), STATPADCOLOR, false)
-	/*stats := map[string]any{
-		"V":     g.Chip8.V,
-		"I":     g.Chip8.I,
-		"PC":    g.Chip8.PC,
-		"SP":    g.Chip8.SP,
-		"DT":    g.Chip8.DT,
-		"ST":    g.Chip8.ST,
-		"Stack": g.Chip8.Stack[0:8], //not all 16, just 8
-	}*/
 	g.DrawStatpad(screen, footerHeight, gridWidht, padding, lineHeight)
 	//RIGHT SUBSCREEN--HEX KEYPAD
 	//right side of game screen rect-->starts at 640 on x and 0 on y
 	rightWidth := 360  //1000 is widht of disp, 640 is game-->right side = 1000 - 640= 360
-	rightHeight := 320 //same heigt as game disp
+	rightHeight := 640 //right subscreen for keypad covers the whole height
 	//for hex keypad
 	vector.FillRect(screen, 640, 0, float32(rightWidth), float32(rightHeight), KEYPADCOLOR, false)
 	//BORDER-->if we do this before, the border will be covered by subscreens
 	//-->window size(1000, 640)-->line needs to be betwn top half(game) and statpad
 	//game(top half)-->640,320-->so line needs to be at 320 on Y and needs to cover whole X .i.e 0 to 1000 on x
 	//(1000, 320)-(0, 320)= (1000, 320) covers whole X at 320 Y
-	g.DrawBorder(screen, 1000, 320, 0, 320, 8)
+	g.DrawBorder(screen, 640, 320, 0, 320, 8) //tills 640, 320 now(changed subscreen div form beofre)
 	//vertical border
-	g.DrawBorder(screen, 640, 320, 640, 0, 8) //starts at(640, 0), ends at (640, 320) a line that covers 0-320 on Y at X=640
+	g.DrawBorder(screen, 640, 640, 640, 0, 8) //starts at(640, 0), ends at (640, 640) a line that covers 0-640 on Y at X=640
 }
 
 func (g *Game) DrawBorder(screen *ebiten.Image, borderLength, borderHeight, startX, startY, borderWidth int) {
@@ -316,31 +344,37 @@ func (g *Game) DrawStatpad(screen *ebiten.Image, footerHeight, gridWidht, lineHe
 	printStat := func(x, y float64, statName string, stat any) {
 		statCnfg.GeoM.Reset() //translate stacks(adds) for each stat	so we need to clear pos input by prev stat
 		statCnfg.GeoM.Translate(x, y)
-		text.Draw(screen, fmt.Sprintf("%v: %v", statName, stat), g.FontFace, statCnfg)
+		boxWidth := 100
+		if statName == "Stack" || statName == "V" {
+			boxWidth = 400 //smtimes needs 400
+		}
+		vector.FillRect(screen, float32(x-5), float32(y-15), float32(boxWidth), 50, color.RGBA{20, 20, 40, 255}, false)
+		text.Draw(screen, fmt.Sprintf("%v: %v ", statName, stat), g.FontFace, statCnfg)
 	}
 	//PC-->GRID 1
 	x, y := getPos(0, 0)
 	//fmt.Print(getPos(0, 0))
-	printStat(x, y, "PC", g.Chip8.PC)
+	printStat(x, y, "PC", g.stats["PC"])
 	//I-->GRID 2
 	x, y = getPos(0, 1) // same col, next row
-	printStat(x, y, "I", g.Chip8.I)
-	//SP-->GRID 3
-	x, y = getPos(0, 2)
-	printStat(x, y, "SP", g.Chip8.SP)
+	printStat(x, y, "I", g.stats["I"])
 	//DT-->GRID 4
-	x, y = getPos(0, 3)
-	printStat(x, y, "DT", g.Chip8.DT)
+	x, y = getPos(0, 2)
+	printStat(x, y, "DT", g.stats["DT"])
 	//ST-->GRID 5
-	x, y = getPos(0, 4)
-	printStat(x, y, "ST", g.Chip8.ST)
-	//Stack-->GRID 6
+	x, y = getPos(0, 3)
+	printStat(x, y, "ST", g.stats["ST"])
+	//SP-->GRID 3
 	x, y = getPos(1, 0)
-	printStat(x, y, "Stack", g.Chip8.Stack[0:8])
-	//V-->GRID 7
-	x, y = getPos(1, 1)
-	printStat(x, y, "V", g.Chip8.V)
+	printStat(x, y, "SP", g.stats["SP"])
 	//OPCODE-->GRID 8
 	x, y = getPos(1, 2)
-	printStat(x, y, "Opcode", g.Chip8.Opcode)
+	printStat(x, y, "Opcode", g.stats["Opcode"])
+	//Stack-->GRID 6
+	x, y = getPos(1, 1)
+	printStat(x, y, "Stack", g.stats["Stack"])
+	//V-->GRID 7
+	x, y = getPos(1, 3)
+	printStat(x, y, "V", g.stats["V"])
+
 }
