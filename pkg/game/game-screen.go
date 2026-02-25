@@ -134,6 +134,8 @@ func (g *Game) Update() error {
 			//so 600 inst per second
 			g.Chip8.CoreLoop()
 		}
+		//input
+		g.HandleKeyPad()
 		//timers
 		if g.Chip8.DT > 0 {
 			g.Chip8.DT--
@@ -172,9 +174,6 @@ func (g *Game) Update() error {
 		//not running - menu
 		g.Menu()
 	}
-
-	//Input
-	g.HandleKeyPad()
 	return nil
 }
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -451,7 +450,8 @@ func (g *Game) HandleKeyPad() {
 	}
 	//using inpoututil.IsKeyJustPressed cuz it returns true for first frame only so no multi clicks on one press effect
 	for k, v := range keyMap {
-		if inpututil.IsKeyJustPressed(k) {
+		//switched to ebiten.IsKeyPressed cuz in actual game, just first frame result isnt enough, need all frames key press result
+		if ebiten.IsKeyPressed(k) {
 			g.Chip8.Keypad[v] = true
 			print(fmt.Sprintf("Pressed: %v\n", k))
 			fmt.Println(v)
