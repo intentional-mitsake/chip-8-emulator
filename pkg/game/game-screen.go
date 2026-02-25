@@ -272,7 +272,7 @@ func (g *Game) DrawSubscreen(screen *ebiten.Image) {
 	footerWidth := 1000 //whole window should be covered-->window stats set in main.go
 	footerHeight := 320 //all the height left below the game/ tinkered to figure out
 	gridWidht := 80     //tinkered to figure out
-	padding := 10       //tinkered to figure out
+	padding := 30       //tinkered to figure out
 	lineHeight := 20
 	//for V, I, PC, SP,..
 	//also it might be better to pass footerW and footer Widht here before 0,320
@@ -286,41 +286,7 @@ func (g *Game) DrawSubscreen(screen *ebiten.Image) {
 		"ST":    g.Chip8.ST,
 		"Stack": g.Chip8.Stack[0:8], //not all 16, just 8
 	}*/
-	statCnfg := &text.DrawOptions{}
-	statCnfg.Filter = ebiten.FilterNearest
-	getPos := func(col, row int) (float64, float64) {
-		return float64(padding) + (float64(col) * float64(gridWidht)), (float64(footerHeight) + float64(padding)) + (float64(row) * float64(lineHeight))
-	}
-	//PC-->GRID 1
-	x, y := getPos(0, 0)
-	//fmt.Print(getPos(0, 0))
-	statCnfg.GeoM.Translate(x, y)
-	text.Draw(screen, fmt.Sprintf("PC: %v", g.Chip8.PC), g.FontFace, statCnfg)
-	//I-->GRID 2
-	statCnfg.GeoM.Reset() //wihtout this, translate stacks(adds) and pos is wrong
-	x, y = getPos(0, 1)   // same col, next row
-	statCnfg.GeoM.Translate(x, y)
-	text.Draw(screen, fmt.Sprintf("I: %v", g.Chip8.I), g.FontFace, statCnfg)
-	//SP-->GRID 3
-	statCnfg.GeoM.Reset()
-	x, y = getPos(0, 2)
-	statCnfg.GeoM.Translate(x, y)
-	text.Draw(screen, fmt.Sprintf("SP: %v", g.Chip8.SP), g.FontFace, statCnfg)
-	//DT-->GRID 4
-	statCnfg.GeoM.Reset()
-	x, y = getPos(0, 3)
-	statCnfg.GeoM.Translate(x, y)
-	text.Draw(screen, fmt.Sprintf("DT: %v", g.Chip8.DT), g.FontFace, statCnfg)
-	//ST-->GRID 5
-	statCnfg.GeoM.Reset()
-	x, y = getPos(0, 4)
-	statCnfg.GeoM.Translate(x, y)
-	text.Draw(screen, fmt.Sprintf("ST: %v", g.Chip8.ST), g.FontFace, statCnfg)
-	//Stack-->GRID 6
-	statCnfg.GeoM.Reset()
-	x, y = getPos(1, 0)
-	statCnfg.GeoM.Translate(x, y)
-	text.Draw(screen, fmt.Sprintf("Stack: %v", g.Chip8.Stack[0:8]), g.FontFace, statCnfg)
+	g.DrawStatpad(screen, footerHeight, gridWidht, padding, lineHeight)
 	//RIGHT SUBSCREEN--HEX KEYPAD
 	//right side of game screen rect-->starts at 640 on x and 0 on y
 	rightWidth := 360  //1000 is widht of disp, 640 is game-->right side = 1000 - 640= 360
@@ -331,13 +297,44 @@ func (g *Game) DrawSubscreen(screen *ebiten.Image) {
 	//-->window size(1000, 640)-->line needs to be betwn top half(game) and statpad
 	//game(top half)-->640,320-->so line needs to be at 320 on Y and needs to cover whole X .i.e 0 to 1000 on x
 	//(1000, 320)-(0, 320)= (1000, 320) covers whole X at 320 Y
-	g.DrawBorder(screen, 1000, 320, 0, 320)
+	g.DrawBorder(screen, 1000, 320, 0, 320, 8)
 	//vertical border
-	g.DrawBorder(screen, 640, 320, 640, 0) //starts at(640, 0), ends at (640, 320) a line that covers 0-320 on Y at X=640
+	g.DrawBorder(screen, 640, 320, 640, 0, 8) //starts at(640, 0), ends at (640, 320) a line that covers 0-320 on Y at X=640
 }
 
-func (g *Game) DrawBorder(screen *ebiten.Image, borderLength, borderHeight, startX, startY int) {
-	borderWidth := 8
+func (g *Game) DrawBorder(screen *ebiten.Image, borderLength, borderHeight, startX, startY, borderWidth int) {
 	vector.StrokeLine(screen, float32(borderLength), float32(borderHeight), float32(startX), float32(startY), float32(borderWidth), BORDERCOLOR, false)
 
+}
+
+func (g *Game) DrawStatpad(screen *ebiten.Image, footerHeight, gridWidht, lineHeight, padding int) {
+	statCnfg := &text.DrawOptions{}
+	statCnfg.Filter = ebiten.FilterNearest
+	getPos := func(col, row int) (float64, float64) {
+		return float64(padding) + (float64(col) * float64(gridWidht)), (float64(footerHeight) + float64(padding)) + (float64(row) * float64(lineHeight))
+	}
+	printStat := func(x, y float64, statName string, stat any) {
+		statCnfg.GeoM.Reset()
+		statCnfg.GeoM.Translate(x, y)
+		text.Draw(screen, fmt.Sprintf("%v: %v", statName, stat), g.FontFace, statCnfg)
+	}
+	//PC-->GRID 1
+	x, y := getPos(0, 0)
+	//fmt.Print(getPos(0, 0))
+	printStat(x, y, "PC", g.Chip8.PC)
+	//I-->GRID 2
+	x, y = getPos(0, 1) // same col, next row
+	printStat(x, y, "I", g.Chip8.I)
+	//SP-->GRID 3
+	x, y = getPos(0, 2)
+	printStat(x, y, "SP", g.Chip8.SP)
+	//DT-->GRID 4
+	x, y = getPos(0, 3)
+	printStat(x, y, "DT", g.Chip8.DT)
+	//ST-->GRID 5
+	x, y = getPos(0, 4)
+	printStat(x, y, "ST", g.Chip8.ST)
+	//Stack-->GRID 6
+	x, y = getPos(1, 0)
+	printStat(x, y, "Stack", g.Chip8.Stack[0:8])
 }
