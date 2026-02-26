@@ -373,6 +373,13 @@ func (g *Game) DrawStatpad(screen *ebiten.Image, footerHeight, gridWidht, lineHe
 		if statName == "Stack" || statName == "V" {
 			boxWidth = 400 //smtimes needs 400
 		}
+		if statName == "Opcode" {
+			statCnfg.ColorScale.ScaleWithColor(STATSCOLOR)
+			vector.FillRect(screen, float32(x-5), float32(y-15), float32(boxWidth+10), 60, GRIDBORDER, false)
+			vector.FillRect(screen, float32(x), float32(y-10), float32(boxWidth), 50, GRIDCOLOR, false)
+			text.Draw(screen, fmt.Sprintf("%v: %X ", statName, stat), g.FontFace, statCnfg) //for hex
+			return
+		}
 		statCnfg.ColorScale.ScaleWithColor(STATSCOLOR)
 		vector.FillRect(screen, float32(x-5), float32(y-15), float32(boxWidth+10), 60, GRIDBORDER, false)
 		vector.FillRect(screen, float32(x), float32(y-10), float32(boxWidth), 50, GRIDCOLOR, false)
