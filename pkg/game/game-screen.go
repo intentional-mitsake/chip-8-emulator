@@ -436,7 +436,7 @@ func (g *Game) DrawKeypad(screen *ebiten.Image, keypadWidth, keypadHeight, paddi
 		x := startX + padding - 10 + colNum*gridLength //without the 8, the keypad shifts a lil more to left and last keys touch border
 		y := startY + padding + 80 + rowNum*gridLength //to push the keypad down even more than padding
 		keyCnfg.Filter = ebiten.FilterNearest
-		keyCnfg.ColorScale.ScaleWithColor(color.Black)
+		keyCnfg.ColorScale.ScaleWithColor(color.White)
 		keyCnfg.GeoM.Translate(float64(x+(gridLength-padding)/2), float64(y+(gridLength-padding)/2))
 		keyN, byteVal := GetKey(i)
 		keyCnfg.PrimaryAlign = text.AlignCenter
@@ -446,21 +446,28 @@ func (g *Game) DrawKeypad(screen *ebiten.Image, keypadWidth, keypadHeight, paddi
 		if i > 15 && effectActive {
 			//the -8 and +8 is adjusted to give the feel of key being presesd or unpressed
 			//prettry much shifting the pos of either the first rect or the second rect for htis
-			vector.FillRect(screen, float32(x-8), float32(y-8), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
+			vector.FillRect(screen, float32(x-4), float32(y-4), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
 			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), ACTIVEKEY, false)
+			keyCnfg.ColorScale.Reset() //doesnt work unkless we reset
+			keyCnfg.ColorScale.ScaleWithColor(color.White)
 			text.Draw(screen, fmt.Sprintf("%s", keyN), g.FontFace, keyCnfg)
 		} else if effectActive {
-			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
+			vector.FillRect(screen, float32(x-4), float32(y-4), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
 			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), ACTIVEKEY, false)
+			keyCnfg.ColorScale.Reset()
+			keyCnfg.ColorScale.ScaleWithColor(color.Black)
 			text.Draw(screen, fmt.Sprintf("%s-->%X", keyN, byteVal), g.FontFace, keyCnfg)
 		} else if i > 15 {
 			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
 			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), SPECIALINACTIVE, false)
-			keyCnfg.ColorScale.ScaleWithColor(color.White)
+			keyCnfg.ColorScale.Reset()
+			keyCnfg.ColorScale.ScaleWithColor(ACTIVEKEY)
 			text.Draw(screen, fmt.Sprintf("%s", keyN), g.FontFace, keyCnfg)
 		} else {
 			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding+8), float32(gridLength-padding+8), KEYBG, false)
 			vector.FillRect(screen, float32(x), float32(y), float32(gridLength-padding), float32(gridLength-padding), KEYBORDER, false)
+			keyCnfg.ColorScale.Reset()
+			keyCnfg.ColorScale.ScaleWithColor(color.White)
 			text.Draw(screen, fmt.Sprintf("%s-->%X", keyN, byteVal), g.FontFace, keyCnfg)
 		}
 
@@ -478,7 +485,7 @@ func (g *Game) HandleKeyPad() {
 			//for special keys will continue using inpututil cuz we need just first frame and its enough
 			if inpututil.IsKeyJustPressed(k) {
 				g.Chip8.Keypad[v] = true
-				print(fmt.Sprintf("Pressed: %v\n", k))
+				//print(fmt.Sprintf("Pressed: %v\n", k))
 				switch k {
 				case ebiten.KeyBackspace:
 					g.Chip8.Reset()     //reset chip and clear disp
@@ -513,8 +520,8 @@ func (g *Game) HandleKeyPad() {
 			//switched to ebiten.IsKeyPressed cuz in actual game, just first frame result isnt enough, need all frames key press result
 			if ebiten.IsKeyPressed(k) {
 				g.Chip8.Keypad[v] = true
-				print(fmt.Sprintf("Pressed: %v\n", k))
-				fmt.Println(v)
+				//print(fmt.Sprintf("Pressed: %v\n", k))
+				//fmt.Println(v)
 				//if key was pressed put a timer to hold the effect
 				//byte from 0x0 to 0xF to 20 its pretty much 0-20
 				g.keyTime[v] = 10

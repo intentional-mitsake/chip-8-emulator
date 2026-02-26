@@ -30,7 +30,7 @@ func GetKey(index int) (qwerty string, hex byte) {
 		16: "<--[BKSP]",
 		17: "PAUSE[P]",
 		18: "NGAME[N]",
-		19: "HELP:[H]",
+		19: "HELP[H]",
 	}
 	return specialSet[index], byte(index)
 }
