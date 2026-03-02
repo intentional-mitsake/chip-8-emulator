@@ -18,7 +18,7 @@ The CHIP-8 is the perfect intro emulator better accessible than the Game Boy, bu
 
 
 ## Tech Stack
-* **Language:** [Go]
+* **Language:** Go
 * **Graphics/Input:** Ebiton
 
 ## Resources
